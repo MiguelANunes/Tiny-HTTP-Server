@@ -44,7 +44,7 @@ def get_port() -> Optional[int]:
     return None
 
 if __name__ == "__main__":
-    print("migs' HTTP Server in Python!")
+    print("migs' HTTP Server")
     
     print("To set a port for the server to listen to, set it in the command line when starting the server")
     print("By default, the server will listen to port 9999")
