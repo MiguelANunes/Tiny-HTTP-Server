@@ -37,20 +37,34 @@ def get_port() -> Optional[int]:
     # Verificando se o numero passado está dentro do que é valido para um porta
     # Se for, retorno a porta
     if 0 < port < 32720:
-        print(f"***Listening on port {port}***")
+        print(f"\n\t>>>USANDO A PORTA {port}<<<\n")
         return port
     
     # Se não, não retorna nada
     return None
 
-if __name__ == "__main__":
+def main() -> None:
+    """
+    Função principal, que inicia o processo do servidor
+    
+    Recebe:
+        Nada
+        
+    Retorna:
+        Nada
+    """
+    
     print("migs' HTTP Server")
     
-    print("To set a port for the server to listen to, set it in the command line when starting the server")
-    print("By default, the server will listen to port 9999")
+    print("Para definir a porta que o servidor irá usar para receber requisições, forneça ela na linha de comando quando iniciar o servidor")
+    print("\tPor exemplo, 'python Main.py 12345'")
+    print("Por padrão, o servidor usará a porta 9999")
     
     # Recuperando uma possível porta passada na linha de comando
     port = get_port()
     
     # Rodando o servidor com a porta fornecida
     Server.server(port)
+
+if __name__ == "__main__":
+    main()

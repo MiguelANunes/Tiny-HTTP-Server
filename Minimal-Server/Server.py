@@ -3,6 +3,7 @@ from typing import Optional # Anotações de tipo
 
 """
     TODO: Descrever esse arquivo aqui
+    TODO: Fazer validações do input
 """
 
 def has_body(HTTPLine:str) -> bool:
@@ -10,6 +11,8 @@ def has_body(HTTPLine:str) -> bool:
     Função que determina se a requisição HTTP recebida tem ou não um corpo de mensagem
     Isso é inferido a partir do método presente na requisição
     Caso a requisição seja um POST, PUT ou PATCH, então ela terá um corpo, caso contrário não terá
+    O método DELETE também aceita um corpo na requisição, porém sua semântica não é definida, então esse caso
+        não será considerado e o corpo de qualquer requisição DELETE será descartado
     
     Recebe:
         HTTPLine: A primeira linha da requisição HTTP, contendo o método da requisição
@@ -20,23 +23,19 @@ def has_body(HTTPLine:str) -> bool:
     
     return "POST" in HTTPLine or "PUT" in HTTPLine or "PATCH" in HTTPLine
 
-def handle_request(clientSocket: socket.socket) -> "tuple[str, str, Optional[str]]":
+def handle_request(clientSocket: socket.socket) -> bool:
     """
     Função que lida com uma requisição HTTP
     Quando o servidor receber uma requisição, essa função irá processar a mensagem HTTP recebida
-    Após processar a mensagem, ira retornar ela ao servidor em um formato de tupla
-    Essa tupla ira conter, nessa ordem, a primeira linha da requisição, seu cabeçalho e, se presente, seu corpo
+    Após processar a mensagem, irá chamar a função que processa a reposta para essa requisição
+    Retorna booleano indicando se a requisição foi aceita ou não
     
     Recebe:
         clienteSocket: A porta na qual um cliente se conectou e está mandando uma requisição HTTP
         
     Retorna:
-        Uma tupla de strings contendo os componentes da requisição HTTP
-            O primeiro elemento é a primeira linha da requisição
-            O segundo elemento são os cabeçalhos da requisição
-            O terceiro elemento é o corpo da requisição (opcional)
-    
-    TODO: Essa função não deveria retornar uma tupla, e sim um booleano que indica se foi possível processar a requisição
+        True caso a requisição tenha sido aceita (retorno 1xx, 2xx ou 3xx)
+        False caso a requisição tenha sido recusada (retorno 4xx ou 5xx)
     """
     
     HTTPStartLine = "" # Primeira linha da requisição (onde tem o método)
@@ -55,7 +54,7 @@ def handle_request(clientSocket: socket.socket) -> "tuple[str, str, Optional[str
         for line in incomingMessage:
         
             if aux == 0:
-                HTTPStartLine = line.rstrip()
+                HTTPStartLine = line
                 # Caso o método não tenha um corpo, não preciso contar duas linhas vazias
                 max_blanks = max_blanks - 1 if not has_body(HTTPStartLine) else max_blanks
         
@@ -72,7 +71,7 @@ def handle_request(clientSocket: socket.socket) -> "tuple[str, str, Optional[str
             
             if blanks == max_blanks:
                 # Aqui eu começo a processar a resposta
-                print(f"Primeira linha: {HTTPStartLine}")
+                print(f"Primeira linha: {HTTPStartLine.rstrip()}")
                 
                 print(f"Cabeçalhos:")
                 for header in HTTPHeaders.splitlines():
@@ -84,7 +83,7 @@ def handle_request(clientSocket: socket.socket) -> "tuple[str, str, Optional[str
 
             aux += 1
     
-    return tuple()
+    return True
 
 def server(port:Optional[int]=None) -> None:
     """
