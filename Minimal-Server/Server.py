@@ -1,5 +1,8 @@
 import socket # Operações sobre sockets
 from typing import Optional # Anotações de tipo
+from ResponseHandler import Response
+from RequestHandler import Request
+from Exceptions import HTTPException
 
 """
     TODO: Descrever esse arquivo aqui
@@ -58,7 +61,7 @@ def handle_request(clientSocket: socket.socket) -> bool:
                 # Caso o método não tenha um corpo, não preciso contar duas linhas vazias
                 max_blanks = max_blanks - 1 if not has_body(HTTPStartLine) else max_blanks
         
-            if aux > 0 and blanks == 0:
+            if aux > 0 and blanks == 0 and (line != "\r\n" or line != "\n"):
                 # Cabeçalhos acabam após uma linha vazia
                 HTTPHeaders += line
                 
@@ -70,16 +73,29 @@ def handle_request(clientSocket: socket.socket) -> bool:
                 blanks += 1
             
             if blanks == max_blanks:
-                # Aqui eu começo a processar a resposta
-                print(f"Primeira linha: {HTTPStartLine.rstrip()}")
+                # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
                 
-                print(f"Cabeçalhos:")
-                for header in HTTPHeaders.splitlines():
-                    print(f"\t{header.rstrip()}")
+                try:
+                    clientRequest    = Request(HTTPStartLine.rstrip(), HTTPHeaders, HTTPBody)
+                    responseToClient = Response(clientRequest) # Gero o objeto de resposta a partir da conexção
+                    responseToClient.prepareResponse() # Preparando a resposta para ser eviada
                     
-                print(f"Corpo:")
-                for body in HTTPBody:
-                    print(f"\t{body.rstrip()}")
+                    formattedResponse = responseToClient.formatResponse()
+                    
+                    clientSocket.sendall(bytes(formattedResponse, "utf-8"))
+                    
+                    return True
+                    
+                except HTTPException as exception:
+                    # Caso alguma exceção HTTP tenha sido levantada, processo ela com uma resposta de erro correspondente a exceção
+                    print("Excessão HTTP")
+                    print(exception)
+                    return False
+                except Exception:
+                    # Caso qualquer outra exceção tenha sido levantada,
+                    #   registro isso no log, respondo ao cliente com erro 418 e mato a conexão
+                    print("Outra excessão")
+                    return False
 
             aux += 1
     
@@ -121,7 +137,12 @@ def server(port:Optional[int]=None) -> None:
             
             print(f"Conexão vinda de {address}")
             
-            request = handle_request(clientSocket)
+            success = handle_request(clientSocket)
+            
+            if success:
+                print("Requisição respondida com sucesso!")
+            else:
+                print("Erro na requisição!")
         
     return
     

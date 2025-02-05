@@ -2,12 +2,17 @@ import sys # Para ter acesso ao argv
 from typing import Optional # Anotações de tipo
 
 """
-Função principal do servidor HTTP
+**** migs' Minimal HTTP Server ****
 
-Processa uma eventual porta passada por linha de comando e inicia o processo do servidor
+Um micro servidor HTTP estático que processa requisições GET, HEAD e OPTIONS no localhost:9999 (porta padrão, outras podem ser informadas)
+
+Retorna o conteúdo da pasta Content/ (por padrão as páginas do meu blog pessoal (miguelanunes.github.io)) para as requisições GET
+Retorna apenas o cabeçalho das requisições GET para as requisições HEAD
+Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições OPTIONS
 """
 
 # TODO: Fazer mensagens de aviso decentes
+# TODO: Fazer um sistema para criar logs
 
 import Server
 

@@ -1,9 +1,9 @@
-from typing import Optional # Anotações de tipo
 from enum import Enum
 
 """
 Arquivo que define exceções específicas sobre o protocolo HTTP
 
+TODO: Melhorar essa descrição
 TODO: Talvez seria uma boa ideia deixar os enumeradores em outro arquivo
 """
 
@@ -20,8 +20,9 @@ class ImplementedMethods(Enum):
     Enumerador que lista métodos que são implementados por esse servidorzinho
     Para processar novos métodos, basta adicionar eles nesse enum (e implementar o suporte)
     """
-    GET  = "GET"
-    HEAD = "HEAD"
+    GET     = "GET"
+    HEAD    = "HEAD"
+    OPTIONS = "OPTIONS"
 
     def __str__(self) -> str:
         return self.value
@@ -46,7 +47,17 @@ class ForbiddenPaths(Enum):
     def __str__(self) -> str:
         return self.value
 
-class BadRequest(Exception): # 400
+class HTTPException(Exception):
+    """
+    Exceção base que é herdada por todas as exceções referentes ao HTTP
+    Serve para separar as exceções do HTTP das exceções normais do Python
+    """
+    
+    def __init__(self, message:str) -> None:
+        super().__init__(message)
+    
+
+class BadRequest(HTTPException): # 400
     """
     Exceção que é lançada quando a requisição feita pelo cliente é mal formada ou não pode ser processada de alguma forma
     """
@@ -57,7 +68,7 @@ class BadRequest(Exception): # 400
         self.component = comp    # Qual dos componentes que deu erro
         self.badComp   = badComp # O componente específico que estava errado
         
-class Forbidden(Exception): # 403
+class Forbidden(HTTPException): # 403
     """
     Exceção que é lançada quando a requisição feita pelo cliente contém um caminho proibido de ser acessado
     """
@@ -67,7 +78,16 @@ class Forbidden(Exception): # 403
         
         self.requestedPath = requestedPath # O caminho que o cliente pediu
         
-class MethodNotImplemented(Exception): # 501
+class ImTeapot(HTTPException): # 418
+    """
+    Exceção que é lançada quando não quero lidar com a requisição do cliente
+    """
+    
+    def __init__(self, message:str) -> None:
+        super().__init__(message) # Mensagem da exceção
+        
+        
+class MethodNotImplemented(HTTPException): # 501
     """
     Exceção que é lançada quando a requisição possui um método não permitido por esse servidor
     """
@@ -77,7 +97,7 @@ class MethodNotImplemented(Exception): # 501
         
         self.method = method # Método não suportado que foi enviado na requisição
         
-class VersionNotSupported(Exception): # 505
+class VersionNotSupported(HTTPException): # 505
     """
     Exceção que é lançada quando a requisição pede uma versão HTTP que não é suportada
     """
