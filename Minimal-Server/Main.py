@@ -1,5 +1,8 @@
-import sys # Para ter acesso ao argv
+import sys                  # Para ter acesso ao argv
+import logging              # Biblioteca de criação de logs
 from typing import Optional # Anotações de tipo
+import Server               # Minha implementação do servidor
+import Configuration        # Configurações do Servidor
 
 """
 **** migs' Minimal HTTP Server ****
@@ -12,9 +15,6 @@ Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições O
 """
 
 # TODO: Fazer mensagens de aviso decentes
-# TODO: Fazer um sistema para criar logs
-
-import Server
 
 def get_port() -> Optional[int]:
     """
@@ -29,8 +29,7 @@ def get_port() -> Optional[int]:
     """
     
     # Primeiro, verifico se algum argumento de linha de comando foi passado
-    if (len(sys.argv) != 2):
-        # FIXME: Vou assumir que o único argumento possível é o número da porta
+    if (len(sys.argv) < 2):
         return None
         
     # Se sim, vejo se passou um int válido para ser uma porta
@@ -65,11 +64,30 @@ def main() -> None:
     print("\tPor exemplo, 'python Main.py 12345'")
     print("Por padrão, o servidor usará a porta 9999")
     
+    # Configurando o sistema de logging da biblioteca logging
+    log = logging.getLogger("Main")
+    logging.basicConfig(filename="server.log", level=logging.DEBUG, filemode="w")
+    logging.Formatter("(%(asctime)s) [%(levelname)s]: %(message)s", "%Y-%m-%d %H:%M:%S")
+    
+        
     # Recuperando uma possível porta passada na linha de comando
     port = get_port()
     
+    try:
+        assert sys.version_info >= (3, 11)
+    except AssertionError:
+        print("É necessário executar o servidor com Python versão 3.11 ou mais recente!")
+        return
+    
+    # Inicializando as configurações
+    # TODO: Deve ter um jeito melhor de fazer isso
+    serverConfigValues = Configuration.init_config()
+    
     # Rodando o servidor com a porta fornecida
-    Server.server(port)
+    Server.server(serverConfigValues, port)
+    
+    # Fechando o logger depois de fechar o servidor
+    logging.shutdown()
 
 if __name__ == "__main__":
     main()

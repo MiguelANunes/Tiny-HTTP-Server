@@ -9,6 +9,8 @@ Logo, eu copiei o JSON todo e deixo ele armazenado dentro de uma variável do py
 Certamente tem um jeito melhor de fazer isso, mas esse projeto não é sério o suficiente para eu me importar com isso
 """
 
+# TODO: Renomear esse arquivo, melhorar o comentário de docstring
+
 responseJSON = r"""
 {
   "1xx": {
@@ -465,3 +467,51 @@ responseJSON = r"""
 """
 
 responseDict = json.loads(responseJSON)
+
+contentTypeJSON = r"""
+{
+  ".html": "text/html",
+  ".htm": "text/html",
+  ".css": "text/css",
+  ".js": "application/javascript",
+  ".json": "application/json",
+  ".xml": "application/xml",
+  ".txt": "text/plain",
+  ".csv": "text/csv",
+  ".pdf": "application/pdf",
+  ".zip": "application/zip",
+  ".tar": "application/x-tar",
+  ".gz": "application/gzip",
+  ".rar": "application/vnd.rar",
+  ".7z": "application/x-7z-compressed",
+  ".mp3": "audio/mpeg",
+  ".mp4": "video/mp4",
+  ".mpeg": "video/mpeg",
+  ".webm": "video/webm",
+  ".ogg": "audio/ogg",
+  ".wav": "audio/wav",
+  ".flac": "audio/flac",
+  ".aac": "audio/aac",
+  ".avi": "video/x-msvideo",
+  ".mov": "video/quicktime",
+  ".wmv": "video/x-ms-wmv",
+  ".bmp": "image/bmp",
+  ".gif": "image/gif",
+  ".ico": "image/vnd.microsoft.icon",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+  ".tiff": "image/tiff",
+  ".tif": "image/tiff",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".otf": "font/otf",
+  ".eot": "application/vnd.ms-fontobject",
+  ".wasm": "application/wasm"
+}
+"""
+
+contentDict = json.loads(contentTypeJSON)

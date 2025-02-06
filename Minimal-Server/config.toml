@@ -1,0 +1,26 @@
+# Arquivo de configuração para meu servidor
+
+# Nome do Servidor
+server_name = "migs' Minimal Server"
+
+# Métodos que foram implementados
+implemented_methods = ["GET", "HEAD", "OPTIONS"]
+
+# Versões do HTTP que suporta
+http_version = "HTTP/1.1"
+
+# Porta padrão
+port = 9999
+
+# URL Padrão
+host = "localhost"
+
+# Caminhos e Arquivos Proibidos
+[Forbidden]
+paths = ["..", "~", "//"]
+files = [".sh", ".log"]
+
+# Caminhos e Arquivos Permitidos
+[Allowed]
+paths = ["Content"]
+files = [".html", ".css", ".scss", ".js", ".pdf", ".ico", ".jpg", ".png"]
