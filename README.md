@@ -1,7 +1,7 @@
-# migs' HTTP Servers
+# migs' Minimal HTTP Server
 
-Nesse repositório tenho a implementação de dois servidores HTTP simples.
+Uma implementação [minimal](https://pt.wikipedia.org/wiki/Elemento_minimal) de um servidor HTTP em Python.
 
-O `Minimal-Server` é uma implementação minimal em Python, ou seja, ele irá suportar apenas os métodos GET e HEAD (os outros são processados porém retornam 405 Method Not Allowed) e consegue lidar com apenas uma conexão de cada vez.
+Aceita apenas requisições GET, HEAD e OPTIONS, lidando apenas com uma conexão de cada vez (por enquanto) e retorna uma versão (ainda mais) estática do  [meu blog](miguelanunes.github.io).
 
-O `Parallel-Server` é uma implementação em C++ que irá suportar pelo menos os mesmos métodos que o servidor minimal, porém irá lidar com conexões de forma paralela, permitindo multiplas conexões ao mesmo tempo.
+Meu objetivo com esse servidor é apenas me divertir e estudar, então terão bugs, coisas incompletas e TODOs, mas espero com o tempo chegar em um estado estável com ele.

@@ -5,7 +5,7 @@ from Configuration import ServerConfig # Configurações do Servidor
 """
 Arquivo que vai lidar com todas as operações sobre arquivos presentes na pasta Content/
 
-TODO: Esse arquivo só está pegando arquivos .html!!!! 
+TODO: Caso esteja pegando algo que não é texto, tenho que abrir no modo de leitura de binário
 """
 
 log = logging.getLogger("Main.Server.Response.Content")
