@@ -10,7 +10,9 @@ TODO: Caso esteja pegando algo que não é texto, tenho que abrir no modo de lei
 
 log = logging.getLogger("Main.Server.Response.Content")
 
-def get_file_contents(filePath:str, serverConfigValues:ServerConfig) -> str:
+textFiles = [".html", ".css", ".scss", ".js", ".txt", ".json", ".csv", ".xml"]
+
+def get_file_contents(filePath:str, serverConfig:ServerConfig) -> str:
     """
     Função que vai receber um caminho para um arquivo dentro da pasta Content/ e vai retornar o 
         conteúdo do arquivo desse arquivo em uma string
@@ -24,12 +26,13 @@ def get_file_contents(filePath:str, serverConfigValues:ServerConfig) -> str:
     
     log.info(f"Procurando o recurso {filePath}")
     
+    # TODO: Tirar isso daqui
     # Caso tenha pedido a raiz do site (../Content/) retorno o arquivo index.html que está lá
     if filePath == "../Content/":
         filePath += "index.html"
     
     # Começo verificando se o caminho passado termina com algum formato aceito
-    for fileExt in serverConfigValues.allowedFiles:
+    for fileExt in serverConfig.configValue["allowedFiles"]:
         if filePath.endswith(fileExt):
             # Se sim, leio esse arquivo e já retorno ele
             with open(filePath) as f:
@@ -40,7 +43,7 @@ def get_file_contents(filePath:str, serverConfigValues:ServerConfig) -> str:
     dirContents = os.listdir(filePath)
     files       = []
     for item in dirContents:
-        for fileExt in serverConfigValues.allowedFiles:
+        for fileExt in serverConfig.configValue["allowedFiles"]:
             if item.endswith(fileExt):
                 files.append(item)
     

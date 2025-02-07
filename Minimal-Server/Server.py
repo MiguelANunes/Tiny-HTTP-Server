@@ -1,6 +1,7 @@
 import socket                                # Operações sobre sockets
 import logging                               # Biblioteca de criação de logs
-from typing import Optional                  # Anotações de tipo
+import json
+from typing import Optional, Any             # Anotações de tipo
 from ResponseHandler import Response         # Componentes do servidor
 from RequestHandler import Request           # Componentes do servidor
 from Exceptions import HTTPException         # Componentes do servidor
@@ -32,7 +33,7 @@ def has_body(HTTPLine:str) -> bool:
     
     return "POST" in HTTPLine or "PUT" in HTTPLine or "PATCH" in HTTPLine
 
-def handle_request(clientSocket: socket.socket, serverConfigValues:ServerConfig) -> bool:
+def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, responses:dict[Any, Any], types:dict[Any, Any]) -> bool:
     """
     Função que lida com uma requisição HTTP
     Quando o servidor receber uma requisição, essa função irá processar a mensagem HTTP recebida
@@ -82,15 +83,16 @@ def handle_request(clientSocket: socket.socket, serverConfigValues:ServerConfig)
                 # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
                 
                 try:
-                    clientRequest = Request(HTTPStartLine.rstrip(), HTTPHeaders, HTTPBody, serverConfigValues)
+                    clientRequest = Request(HTTPStartLine.rstrip(), HTTPHeaders, HTTPBody, serverConfig)
                     
                     log.info(f"Requisição recebida e processada:")
                     log.info(f"{10*'-'}")
                     log.info(f"\t{str(clientRequest)}")
                     log.info(f"{10*'-'}")
                     
-                    responseToClient = Response(clientRequest, serverConfigValues) # Gero o objeto de resposta a partir da conexção
-                    responseToClient.prepareResponse(serverConfigValues) # Preparando a resposta para ser eviada
+                    # Gero o objeto de resposta a partir da requisição
+                    responseToClient = Response(clientRequest, serverConfig, responses, types)
+                    responseToClient.prepareResponse(serverConfig) # Preparando a resposta para ser eviada
                     
                     log.info(f"Resposta preparada e pronta para ser enviada:")
                     log.info(f"{10*'-'}")
@@ -120,7 +122,30 @@ def handle_request(clientSocket: socket.socket, serverConfigValues:ServerConfig)
     
     return False
 
-def server(serverConfigValues:ServerConfig, port:Optional[int]=None) -> None:
+def load_json_data() -> "tuple[dict[Any, Any], dict[Any, Any]]":
+    """
+    Função que carrega em memória os código de retorno HTTP e códigos MIME de diversos tipos de arquivo
+        em dois dicts
+    Esses dados são lidos de arquivos .JSON que estão dentro da pasta /json/
+    
+    Recebe:
+        Nada
+        
+    Retona:
+        Uma tupla contendo os dicionários de códigos de retorno e tipos MIME
+    """
+    
+    # TODO: Deveria ter um bloco try-except aqui
+    
+    with open("json/response.json") as f:
+        responseDict = json.load(f)
+
+    with open("json/mime.json") as f:
+        contentDict = json.load(f)
+        
+    return (responseDict, contentDict)
+
+def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
     """
     Função principal do servidor HTTP
     Fica em um loop constante ouvindo por requisições HTTP válidas no localhost numa porta fornecida por argumento
@@ -136,17 +161,20 @@ def server(serverConfigValues:ServerConfig, port:Optional[int]=None) -> None:
     
     # Validando a porta
     if port is None:
-        port = serverConfigValues.port  # type: ignore
+        port = serverConfig.configValue["port"]
     
     # Inicializando o servidor em uma porta TCP que recebe endereços IPv4
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
         
         # Pegando o host da configuração e a abrindo a conexão
-        host = serverConfigValues.host
+        host = serverConfig.configValue["host"]
         serverSocket.bind((host, port))
         serverSocket.listen(5) # Servidor vai aceitar no máximo 5 conexões simultâneas
         
+        log.info(f"Servidor funcinando em localhost:{port}")
         print(f"Servidor funcinando em localhost:{port}")
+        
+        resp, typ = load_json_data()
         
         # Loop principal do servidor
         while True:
@@ -156,7 +184,7 @@ def server(serverConfigValues:ServerConfig, port:Optional[int]=None) -> None:
             
             print(f"Conexão vinda de {address}")
             
-            success = handle_request(clientSocket, serverConfigValues)
+            success = handle_request(clientSocket, serverConfig, resp, typ)
             
             if success:
                 print("Requisição respondida com sucesso!")

@@ -1,7 +1,7 @@
 import logging              # Biblioteca de criação de logs
-from typing import Optional # Anotações de tipo
 import Exceptions
-# from Configuration import serverConfigValues # Configurações do Servidor
+from typing import Optional # Anotações de tipo
+# from Configuration import serverConfig # Configurações do Servidor
 
 """
 Arquivo onde é definida a classe de requisições HTTP
@@ -37,7 +37,7 @@ class Request:
             # <METODO> <CAMINHO-RECURSO> <VERSÃO-PROTOCOLO>
         # Uma lista de cabeçalhos
         # Um corpo (opcional)
-    def __init__(self, firstLine:str, headers:str, body:Optional[str], serverConfigValues) -> None:
+    def __init__(self, firstLine:str, headers:str, body:Optional[str], serverConfig) -> None:
         # Não lidarei com requisições que tem corpo aqui, então só copio para o objeto e é isso
         self.body = body
         
@@ -52,24 +52,24 @@ class Request:
             raise Exceptions.BadRequest("Requisição Mal Formada!" ,firstLine)
 
         # Verificando se o método utilizado é suportado
-        if self.method not in serverConfigValues.implemmentedMethods:
+        if self.method not in serverConfig.configValue["implemmentedMethods"]:
             log.error(f"Erro, método requisitado não foi implementado:\n{self.method}")
             raise Exceptions.MethodNotImplemented("Método Não Implementado!", self.method)
 
         # Verificando se o caminho requisitado é válido
         # TODO: Fazer nova validação aqui para garantir que está requisitando um caminho que existe
-        for path in serverConfigValues.forbiddenPaths:
+        for path in serverConfig.configValue["forbiddenPaths"]:
             if path in self.path:
                 log.error(f"Erro, requisitando recurso proibido:\n{self.path}")
                 raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
 
-        for fileExt in serverConfigValues.forbiddenFiles:
+        for fileExt in serverConfig.configValue["forbiddenFiles"]:
             if self.path.endswith(fileExt):
                 log.error(f"Erro, requisitando recurso proibido:\n{self.path}")
                 raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
 
         # Verificando se a versão do HTTP passada na requisição é válida
-        if self.version != serverConfigValues.httpVersion:
+        if self.version != serverConfig.configValue["httpVersion"]:
             log.error(f"Erro, versão do protocolo HTTP não suportada:\n{self.version}")
             raise Exceptions.VersionNotSupported("Versão do Protocolo HTTP Não Suportada", self.version)
 

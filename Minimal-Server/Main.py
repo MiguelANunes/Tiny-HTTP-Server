@@ -15,6 +15,13 @@ Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições O
 """
 
 # TODO: Fazer mensagens de aviso decentes
+# TODO: Implementar uma requisição que desliga o servidor graciosamente
+
+# Configurando o sistema de logging da biblioteca logging
+log = logging.getLogger("Main")
+logging.basicConfig(filename="server.log", level=logging.DEBUG, filemode="w")
+logging.Formatter("(%(asctime)s) [%(levelname)s]: %(message)s", "%Y-%m-%d %H:%M:%S")
+# TODO: Arrumar formatação das msgs de log
 
 def get_port() -> Optional[int]:
     """
@@ -41,8 +48,39 @@ def get_port() -> Optional[int]:
     # Verificando se o numero passado está dentro do que é valido para um porta
     # Se for, retorno a porta
     if 0 < port < 32720:
-        print(f"\n\t>>>USANDO A PORTA {port}<<<\n")
+        log.info(f"Servidor usando a porta {port}")
         return port
+    
+    # Se não, não retorna nada
+    return None
+
+def get_cfg() -> Optional[str]:
+    """
+    Função que procesa um possível nome de arquivo de configuração passado na linha de comando quando o programa foi executado
+    
+    Recebe:
+        Nada
+    
+    Retorna:
+        O nome do arquivo cfg (str) caso tenha passado um nome válido
+        None caso não tenha
+    """
+    
+    # Primeiro, verifico se algum argumento de linha de comando foi passado
+    if (len(sys.argv) < 3):
+        return None
+        
+    # Se sim, vejo se passou um int válido para ser uma porta
+    try:
+        cfg = str(sys.argv[2])
+    except ValueError:
+        return None
+    
+    # Verificando se o numero passado está dentro do que é valido para um porta
+    # Se for, retorno a porta
+    if cfg.endswith(".toml"):
+        log.info(f"Lendo arquivo de configuração {cfg}")
+        return cfg
     
     # Se não, não retorna nada
     return None
@@ -64,12 +102,6 @@ def main() -> None:
     print("\tPor exemplo, 'python Main.py 12345'")
     print("Por padrão, o servidor usará a porta 9999")
     
-    # Configurando o sistema de logging da biblioteca logging
-    log = logging.getLogger("Main")
-    logging.basicConfig(filename="server.log", level=logging.DEBUG, filemode="w")
-    logging.Formatter("(%(asctime)s) [%(levelname)s]: %(message)s", "%Y-%m-%d %H:%M:%S")
-    
-        
     # Recuperando uma possível porta passada na linha de comando
     port = get_port()
     
@@ -80,11 +112,15 @@ def main() -> None:
         return
     
     # Inicializando as configurações
-    # TODO: Deve ter um jeito melhor de fazer isso
-    serverConfigValues = Configuration.init_config()
+    cfg = get_cfg()
+    serverConfig = Configuration.ServerConfig(cfg)
     
-    # Rodando o servidor com a porta fornecida
-    Server.server(serverConfigValues, port)
+    try:
+        # Rodando o servidor com a porta fornecida
+        Server.server(serverConfig, port)
+    except KeyboardInterrupt:
+        log.critical("Execução do servidor interrompida pelo teclado!")
+        print("\nExecução Interrompida! Tentando encerrar graciosamente!")
     
     # Fechando o logger depois de fechar o servidor
     logging.shutdown()

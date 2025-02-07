@@ -1,8 +1,9 @@
 """
 Arquivo que define exceções específicas sobre o protocolo HTTP
 
-TODO: Melhorar essa descrição
-TODO: Talvez seria uma boa ideia deixar os enumeradores em outro arquivo
+Essas exceções específicas servem para melhor lidar com erros encontrados durante o processamento de requisições
+Caso um erro ocorra durante o processamento de uma requisição, uma dessas exceções será lançada
+Ao ser tratada, uma resposta de erro correspondente a exceção lançada será enviada ao cliente
 """
 
 class HTTPException(Exception):
@@ -53,6 +54,15 @@ class ImTeapot(HTTPException): # 418
     def __init__(self, message:str) -> None:
         super().__init__(message) # Mensagem da exceção
         
+class InternalError(HTTPException): # 500
+    """
+    Exceção que é lançada quando ocorre um erro no servidor
+    """
+    
+    def __init__(self, message:str, method:str) -> None:
+        super().__init__(message) # Mensagem da exceção
+        
+        self.method = method # Método não suportado que foi enviado na requisição
         
 class MethodNotImplemented(HTTPException): # 501
     """
