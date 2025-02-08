@@ -59,10 +59,8 @@ class InternalError(HTTPException): # 500
     Exceção que é lançada quando ocorre um erro no servidor
     """
     
-    def __init__(self, message:str, method:str) -> None:
+    def __init__(self, message:str) -> None:
         super().__init__(message) # Mensagem da exceção
-        
-        self.method = method # Método não suportado que foi enviado na requisição
         
 class MethodNotImplemented(HTTPException): # 501
     """

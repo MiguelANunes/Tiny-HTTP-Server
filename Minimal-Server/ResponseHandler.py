@@ -1,4 +1,5 @@
 import logging              # Biblioteca de criação de logs
+import Exceptions
 import ContentHandler
 from email.utils import formatdate
 from RequestHandler import Request
@@ -108,6 +109,9 @@ class Response:
         # Todo o conteúdo possível de ser requisitado está na pasta Content
         # Mais ainda, (eu acho que) todo path possível de ser requisitado começa com "/"
         # Logo, basta concatenar o path requisitado ao final do nome da pasta para abrir aquele path
+        
+        # TODO: Validar se arquivos podem ser acessados aqui
+        
         try:
             # TODO: Lidar com os caminhos aceitos aqui
             
@@ -118,12 +122,20 @@ class Response:
             else:
                 path = self.path
             
-            fileContents = ContentHandler.get_file_contents(path, serverConfig)
+            fileContents = ContentHandler.get_resource(path, serverConfig)
+        except FileNotFoundError:
+            log.error(f"Arquivo não encontrado {self.path}")
+            raise Exceptions.NotFound("Arquivo não encontrado.", self.path)
+        except OSError:
+            log.error(f"Erro ao recuperar recurso {self.path}")
+            raise Exceptions.InternalError(f"Erro ao recuperar recurso {self.path}.")
         except Exception as e:
-            # TODO: Lidar com possíveis erros aqui
-            return
+            # Caso qualquer outro problema tenho acontecido, levanto um 418 e mando o cliente tomar no cu
+            log.critical(f"Exceção {type(e)} não capturada.")
+            raise Exceptions.ImTeapot("Exceção Não Capturada.")
         
         # Tendo recuperado o conteúdo do arquivo, defino ele como o corpo da minha resposta
+        # TODO: Lidar com o caso de fileContents ser do tipo bytes aqui
         self.body = fileContents
         
         # E arrumo os headers

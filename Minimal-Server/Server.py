@@ -15,24 +15,6 @@ from Configuration import ServerConfig # Configurações do Servidor
 
 log = logging.getLogger("Main.Server")
 
-def has_body(HTTPLine:str) -> bool:
-    """
-    Função que determina se a requisição HTTP recebida tem ou não um corpo de mensagem
-    Isso é inferido a partir do método presente na requisição
-    Caso a requisição seja um POST, PUT ou PATCH, então ela terá um corpo, caso contrário não terá
-    O método DELETE também aceita um corpo na requisição, porém sua semântica não é definida, então esse caso
-        não será considerado e o corpo de qualquer requisição DELETE será descartado 
-        (informação retirada da documentação da Mozilla sobre HTTP)
-    
-    Recebe:
-        HTTPLine: A primeira linha da requisição HTTP, contendo o método da requisição
-        
-    Retorna:
-        Booleano indicando se a requisição tem ou não um corpo
-    """
-    
-    return "POST" in HTTPLine or "PUT" in HTTPLine or "PATCH" in HTTPLine
-
 def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, responses:dict[Any, Any], types:dict[Any, Any]) -> bool:
     """
     Função que lida com uma requisição HTTP
@@ -51,6 +33,9 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
     HTTPStartLine = "" # Primeira linha da requisição (onde tem o método)
     HTTPHeaders   = "" # Cabeçalhos da requisição
     HTTPBody      = "" # Corpo da requisição
+    
+    # Função anônima para verificar se uma requisição tem um corpo que deve se rprocessado
+    has_body = lambda l: "POST" in l or "PUT" in l or "PATCH" in l
     
     # Ouvindo a mensagem que o cliente está mandando para o servidor
     with clientSocket.makefile() as incomingMessage:
