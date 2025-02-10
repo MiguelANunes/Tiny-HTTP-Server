@@ -1,7 +1,7 @@
 import logging              # Biblioteca de criação de logs
 import Exceptions
 from typing import Optional # Anotações de tipo
-# from Configuration import serverConfig # Configurações do Servidor
+from Configuration import ServerConfig # Configurações do Servidor
 
 """
 Arquivo onde é definida a classe de requisições HTTP
@@ -37,9 +37,12 @@ class Request:
             # <METODO> <CAMINHO-RECURSO> <VERSÃO-PROTOCOLO>
         # Uma lista de cabeçalhos
         # Um corpo (opcional)
-    def __init__(self, firstLine:str, headers:str, body:Optional[str], serverConfig) -> None:
+    def __init__(self, firstLine:str, headers:str, body:Optional[str], serverConfig: ServerConfig, id:int) -> None:
         # Não lidarei com requisições que tem corpo aqui, então só copio para o objeto e é isso
         self.body = body
+        
+        # Identificando a requisição
+        self.id = id
         
         # Recuperando as informações da primeira linha
         # A primeira linha da requisição sempre terá 3 componentes, separados por espaços
@@ -102,5 +105,7 @@ class Request:
         
         if self.body is not None:
             ret += self.body
+        
+        ret += f"ID: {self.id}\n"
         
         return ret

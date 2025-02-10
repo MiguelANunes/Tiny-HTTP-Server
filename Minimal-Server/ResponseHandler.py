@@ -4,12 +4,13 @@ import ContentHandler
 from email.utils import formatdate
 from RequestHandler import Request
 from Configuration import ServerConfig # Configurações do Servidor
-from typing import Any
+from typing import Any, Union
 
 """
 Arquivo onde é definida a classe de respostas HTTP
 
 TODO: Melhorar essa descrição
+TODO: Ver https://stackoverflow.com/questions/5938007/what-is-the-difference-between-content-type-charset-x-and-content-encoding-x
 """
 
 log = logging.getLogger("Main.Server.Response")
@@ -31,7 +32,7 @@ class Response:
         # O formato da primeira linha é diferente:
             # <VERSÃO-PROTOCOLO> <CÓDIGO-RESPOSTA> <MENSAGEM-RESPOSTA>
         # Como esse servidor é muito simples, irei responder com a mesma versão que o cliente pediu
-    def __init__(self, clientRequest:Request, serverConfig:ServerConfig, responseCodes:dict[Any,Any], contentTypes: dict[Any,Any]) -> None:
+    def __init__(self, clientRequest:Request, serverConfig:ServerConfig, responseCodes:dict[Any,Any], contentTypes: dict[Any,Any], id: int) -> None:
         # Recuperando dados da requisição
         self.method  = clientRequest.method
         self.path    = "../Content" + clientRequest.path  # TODO: melhorar aqui com caminhos aceitos
@@ -50,11 +51,17 @@ class Response:
         self.headers["Content-Lenght"] = 0 # Valor padrão, será calculado quando o conteúdo da resposta for determinado
         
         # Inicializando o corpo da resposta
-        self.body: str
+        # TODO: Validar os casos onde esse atributo é acessado para garantir que não será aberto um tipo bytes como string
+        self.body: Union[str, bytes]
+        # Parâmetro que indica se o corpo da mensagem é binário ou texto
+        self.contentIsBinary = False
         
         # Carregando alguns metadados
         self.HTTPResponseCodes = responseCodes
         self.MIMEContentTypes  = contentTypes
+    
+        # Identificando a resposta
+        self.id = id
     
     def respondOptions(self, serverConfig) -> None:
         """
@@ -137,15 +144,20 @@ class Response:
         # Tendo recuperado o conteúdo do arquivo, defino ele como o corpo da minha resposta
         # TODO: Lidar com o caso de fileContents ser do tipo bytes aqui
         self.body = fileContents
+        self.contentIsBinary = type(self.body) == bytes
         
         # E arrumo os headers
-        self.headers["Content-Lenght"] = len(self.body.encode("utf-8"))
+        if self.contentIsBinary:
+            self.headers["Content-Lenght"] = len(self.body)
+        else:
+            self.headers["Content-Lenght"] = len(self.body.encode("utf-8")) #type: ignore
+            # Linter estava reclamando do .encode pois não consegue inferir que o tipo de self.body sempre será str nessa branch
         
         # Para arrumar o Content-Type, tenho que descobrir o tipo de arquivo que foi requisitado
         # Para isso, preciso pegar a extensão do recurso requisitado
         requestedFile = path.split("/")[-1] # Retorna uma string
         # Dada a única string da lista (requestedFile[0]), separo ela no ponto (.split(".")) e pego o que está depois do ponto ([1]), incluindo o próprio ponto ("."+...)
-        fileExt       = "."+requestedFile.split(".")[1]
+        fileExt       = requestedFile.split(".")[1]
         # Dada a única extensão, recupero qual o Content-Type associado a ela
         contentType   = self.MIMEContentTypes[fileExt] + "; charset=utf-8"
         
@@ -188,7 +200,7 @@ class Response:
         
         pass
     
-    def formatResponse(self) -> str:
+    def formatResponse(self) -> bytes:
         """
         Método que vai formatar os dados a serem retornados no formato adequado para uma resposta HTTP
         Todos os dados necessários para a resposta já estão dentro do objeto, logo basta recuperar eles e formatá-los
@@ -197,21 +209,35 @@ class Response:
             Nada
             
         Retorna:
-            A string de resposta formatada
+            A resposta formatada codificada em bytes
         """
         
-        resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\r\n"
+        resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\r\n".encode("utf-8")
         
-        responseHeaders  = ""
+        responseHeaders  = bytearray()
         for header, value in self.headers.items():
-            responseHeaders += f"{header}: {value}\r\n"
+            responseHeaders += f"{header}: {value}\r\n".encode("utf-8")
         
-        crlf = "\r\n"
-        responseBody = self.body + "\r\n"
+        crlf = "\r\n".encode("utf-8")
+        if self.contentIsBinary:
+            # Novamente linter reclamando que não consegue inferir tipos aqui
+            responseBody = self.body + "\r\n".encode("utf-8") #type: ignore
+        else:
+            responseBody = self.body.encode("utf-8") + "\r\n".encode("utf-8") #type: ignore
 
         response = resposeFirstLine + responseHeaders + crlf + responseBody
         
         return response
     
+    def printHead(self) -> str:
+        # TODO: Documentar você!
+        resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\n"
+        responseHeaders  = str()
+        for header, value in self.headers.items():
+            responseHeaders += f"{header}: {value}\n"
+        
+        return resposeFirstLine + responseHeaders + f"ID: {self.id}\n"
+    
     def __str__(self) -> str:
-        return self.formatResponse().replace("\r", "")
+        # TODO: Caso o corpo da msg seja bytes isso pode printar texto corrompido
+        return self.formatResponse().decode().replace("\r", "")

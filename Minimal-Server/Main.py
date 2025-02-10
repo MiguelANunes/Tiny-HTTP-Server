@@ -17,6 +17,8 @@ Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições O
 # TODO: Fazer mensagens de aviso decentes
 # TODO: Implementar uma requisição que desliga o servidor graciosamente
 # TODO: Implementar decorators em algumas validações e verificações
+# TODO: Talvez seria interessante separar os módulos de manipulação de requisições em uma superclasse de requisições genéricas
+#       e várias subclasses de requisições específicas
 
 # Configurando o sistema de logging da biblioteca logging
 log = logging.getLogger("Main")

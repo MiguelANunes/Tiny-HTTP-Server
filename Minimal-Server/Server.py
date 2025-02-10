@@ -10,10 +10,11 @@ from Configuration import ServerConfig # Configurações do Servidor
 """
     TODO: Descrever esse arquivo aqui
     TODO: Fazer validações do input
-    TODO: Capturar KeyBoardInterrupt no processo do servidor
+    TODO: Talvez precise processar requisições de outra forma, ver: https://stackoverflow.com/questions/29023885/python-socket-readline-without-socket-makefile
 """
 
 log = logging.getLogger("Main.Server")
+id = 0 # Um id numérico e sequencial usado para identificar pares de requisição/resposta
 
 def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, responses:dict[Any, Any], types:dict[Any, Any]) -> bool:
     """
@@ -41,6 +42,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
     with clientSocket.makefile() as incomingMessage:
         
         # deve ter um jeito melhor de fazer isso, mas isso fica para depois
+        # TODO: Fazer de jeito melhor
         aux = 0
         blanks = 0
         max_blanks = 2
@@ -68,39 +70,46 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                 # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
                 
                 try:
-                    clientRequest = Request(HTTPStartLine.rstrip(), HTTPHeaders, HTTPBody, serverConfig)
+                    global id
+                    
+                    clientRequest = Request(HTTPStartLine.rstrip(), HTTPHeaders, HTTPBody, serverConfig, id)
+                    
+                    print(f"\tRequisição: {HTTPStartLine.rstrip()} ID: {id}")
                     
                     log.info(f"Requisição recebida e processada:")
-                    log.info(f"{10*'-'}")
-                    log.info(f"\t{str(clientRequest)}")
-                    log.info(f"{10*'-'}")
+                    log.info(f"\n\n{str(clientRequest)}")
                     
                     # Gero o objeto de resposta a partir da requisição
-                    responseToClient = Response(clientRequest, serverConfig, responses, types)
+                    responseToClient = Response(clientRequest, serverConfig, responses, types, id)
                     responseToClient.prepareResponse(serverConfig) # Preparando a resposta para ser eviada
                     
                     log.info(f"Resposta preparada e pronta para ser enviada:")
-                    log.info(f"{10*'-'}")
-                    log.info(f"\t{str(responseToClient)}")
-                    log.info(f"{10*'-'}")
+                    log.info(f"\n\n{responseToClient.printHead()}")
                     
-                    formattedResponse = responseToClient.formatResponse()
-                    
-                    clientSocket.sendall(bytes(formattedResponse, "utf-8"))
+                    # Método formatResponse() retorna a resposta gerada em binário, essa que é transmitida na socket sem conversão
+                    responseInBinary = responseToClient.formatResponse()
+                    ret = clientSocket.sendall(responseInBinary)
                     
                     log.info("Resposta enviada")
+                    
+                    if ret is not None:
+                        log.warning("Erro ao enviar resposta!")
+                        print("Erro ao enviar resposta!")
+                    
+                    id += 1
                     
                     return True
                     
                 except HTTPException as exception:
                     # Caso alguma exceção HTTP tenha sido levantada, processo ela com uma resposta de erro correspondente a exceção
                     log.warning("Excessão HTTP")
-                    log.warning(exception)
+                    log.warning(repr(exception))
                     return False
-                except Exception:
+                except Exception as exception:
                     # Caso qualquer outra exceção tenha sido levantada,
                     #   registro isso no log, respondo ao cliente com erro 418 e mato a conexão
                     log.warning("Outra excessão")
+                    log.warning(repr(exception))
                     return False
 
             aux += 1
@@ -154,7 +163,7 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
         # Pegando o host da configuração e a abrindo a conexão
         host = serverConfig.configValue["host"]
         serverSocket.bind((host, port))
-        serverSocket.listen(5) # Servidor vai aceitar no máximo 5 conexões simultâneas
+        serverSocket.listen(100) # Servidor vai aceitar no máximo 5 conexões simultâneas
         
         log.info(f"Servidor funcinando em localhost:{port}")
         print(f"Servidor funcinando em localhost:{port}")
@@ -172,9 +181,9 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
             success = handle_request(clientSocket, serverConfig, resp, typ)
             
             if success:
-                print("Requisição respondida com sucesso!")
+                print("Requisição respondida com sucesso!\n")
             else:
-                print("Erro na requisição!")
+                print("Erro na requisição!\n")
         
     return
     
