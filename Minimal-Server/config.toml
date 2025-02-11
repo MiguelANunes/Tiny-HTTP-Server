@@ -14,7 +14,7 @@ port = 9999
 # URL Padrão
 host = "localhost"
 
-# Raiz dos recursos servidos pelo servidor
+# Raiz dos recursos acessados pelo servidor
 content_root = "../Content"
 # --------------------------
 

@@ -1,6 +1,6 @@
 """
-Arquivo que define exceções específicas sobre o protocolo HTTP
-
+Exceptions.py
+Módulo que define exceções específicas sobre o protocolo HTTP
 Essas exceções específicas servem para melhor lidar com erros encontrados durante o processamento de requisições
 Caso um erro ocorra durante o processamento de uma requisição, uma dessas exceções será lançada
 Ao ser tratada, uma resposta de erro correspondente a exceção lançada será enviada ao cliente

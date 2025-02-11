@@ -7,18 +7,18 @@ import Configuration        # Configurações do Servidor
 """
 **** migs' Minimal HTTP Server ****
 
-Um micro servidor HTTP estático que processa requisições GET, HEAD e OPTIONS no localhost:9999 (porta padrão, outras podem ser informadas)
+Um mini servidor HTTP estático que processa requisições GET, HEAD e OPTIONS no localhost:9999 (porta padrão, outras podem ser informadas)
 
 Retorna o conteúdo da pasta Content/ (por padrão as páginas do meu blog pessoal (miguelanunes.github.io)) para as requisições GET
 Retorna apenas o cabeçalho das requisições GET para as requisições HEAD
 Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições OPTIONS
 """
 
-# TODO: Fazer mensagens de aviso decentes
 # TODO: Implementar uma requisição que desliga o servidor graciosamente
 # TODO: Implementar decorators em algumas validações e verificações
 # TODO: Talvez seria interessante separar os módulos de manipulação de requisições em uma superclasse de requisições genéricas
 #       e várias subclasses de requisições específicas
+# Idem para respostas (talvez até mais importante para respostas)
 
 # Configurando o sistema de logging da biblioteca logging
 log = logging.getLogger("Main")

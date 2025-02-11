@@ -1,18 +1,22 @@
-import logging # Biblioteca de criação de logs
-import os      # Para acessar arquivos do sistema
-import gzip    # Para compactar arquivos sendo transferidos
+import logging                         # Biblioteca de criação de logs
+import os                              # Para acessar arquivos do sistema
+import gzip                            # Para compactar arquivos binários sendo transferidos
 from Configuration import ServerConfig # Configurações do Servidor
-from typing import Optional, Union
+from typing import Optional, Union     # Anotações de Tipo
 
 """
-Arquivo que vai lidar com todas as operações sobre arquivos presentes na pasta Content/
-
-TODO: Caso esteja pegando algo que não é texto, tenho que abrir no modo de leitura de binário
+ContentHandler.py
+Módulo que vai recuperar o conteúdo requisitado pelo cliente
+Todo o conteúdo disponível para ser requisitado estará dentro da pasta definida no arquivo de configurações como raiz dos conteúdos
+Apesar de verificar no módulo RequestHandler se os recursos requisitados existem, faço essas verificações aqui novamente por garantia
+Recursos que são retornados ao cliente são de dois tipo, texto ou binário
+Recursos de tipo texto são retornados dentro de uma string
+Recursos de tipo binário são retornados dentro de um tipo bytes
+Para determinar se um arquivo é texto ou binário, verifico qual é sua extensão
 """
 
 log = logging.getLogger("Main.Server.Response.Content")
 
-# TODO: Conferir se não tem uma maneira melhor de verificar se um arquivo é binário
 # Função anônima que verifica se um arquivo é um arquivo texto, se não for é um binário
 isTextFile = lambda f: any([f.endswith(ext) for ext in [".html", ".css", ".scss", ".js", ".txt", ".json", ".csv", ".xml"]])
 

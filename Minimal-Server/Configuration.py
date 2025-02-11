@@ -4,9 +4,9 @@ from typing import Optional, Any # Anotações de tipo
 import sys
 
 """
-Arquivo que vai carregar as configurações do servidor
-
-Lê as configurações de um arquivo .toml (config.toml por padrão) e carrega elas em um dicionário, atributo da classe ServerConfig
+Configuration.py
+Módulo que vai carregar as configurações do servidor
+Lê as configurações de um arquivo .toml (config.toml por padrão, outro nome pode ser fornecido quando inicializa o servidor) e carrega elas em um dicionário, atributo da classe ServerConfig
 Caso algum valor de configuração que era esperado não foi encontrado, printa um erro no terminal e adiciona um aviso no log
 
 TODO: Adicionar uma configuração para fazer shutdown graciosamente (algo tipo receber requisição "GET GRACIOUSLYSHUTDOWN/PRETTYPLEASE")

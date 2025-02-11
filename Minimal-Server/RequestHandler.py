@@ -1,11 +1,14 @@
-import logging              # Biblioteca de criação de logs
-import Exceptions
-from typing import Optional # Anotações de tipo
-from Configuration import ServerConfig # Configurações do Servidor
+import logging                         # Módulo de criação de logs
+import Exceptions                      # Módulo de Execessões do Servidor
+import os                              # Para verificar se o recurso requisitado existe
+from typing import Optional            # Anotações de tipo
+from Configuration import ServerConfig # Módulo de configurações do Servidor
 
 """
-Arquivo onde é definida a classe de requisições HTTP
-TODO: Melhorar essa descrição
+RequestHandler.py
+Nesse módulo são definidas e processadas as requisições enviadas pelo cliente
+O construtor da classe recebe os componentes da requisião em formato string e verifica se a requisição é válida
+Não verifico se o arquivo requisitado
 """
 
 log = logging.getLogger("Main.Server.Request")
@@ -29,7 +32,7 @@ class Request:
         
     Métodos da Classe:
         __init__: Construtor da classe
-        TODO: Métodos para processar os cabeçalhos e métodos para processar o corpo
+        __str__: Retorna uma versão legível por humanos de um objeto dessa classe
     """
     
     # Uma requisição HTTP tem três componentes
@@ -51,29 +54,46 @@ class Request:
         try:
             self.method, self.path, self.version = firstLine.split() # Aqui estou assumindo que o whitespace no final da primeira linha já foi removido
         except ValueError:
-            log.error(f"Erro ao interpretar primeira linha da requisição:\n{firstLine}")
+            log.error(f"Erro ao interpretar primeira linha da requisição:{firstLine}")
             raise Exceptions.BadRequest("Requisição Mal Formada!" ,firstLine)
 
         # Verificando se o método utilizado é suportado
         if self.method not in serverConfig.configValue["implemmentedMethods"]:
-            log.error(f"Erro, método requisitado não foi implementado:\n{self.method}")
+            log.error(f"Erro, método requisitado não foi implementado:{self.method}")
             raise Exceptions.MethodNotImplemented("Método Não Implementado!", self.method)
 
-        # Verificando se o caminho requisitado é válido
-        # TODO: Fazer nova validação aqui para garantir que está requisitando um caminho que existe
+        # Verificando se o recurso requisitado não é proibido
         for path in serverConfig.configValue["forbiddenPaths"]:
             if path in self.path:
-                log.error(f"Erro, requisitando recurso proibido:\n{self.path}")
+                log.error(f"Erro, requisitando recurso proibido:{self.path}")
                 raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
-
+        
+        # Verificando se o recurso requisitado é permitido
+        for path in serverConfig.configValue["allowedPaths"]:
+            if path not in serverConfig.configValue["contentRoot"] + self.path:
+                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{serverConfig.configValue['contentRoot'] + self.path}")
+                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", serverConfig.configValue['contentRoot'] + self.path)
+        
+        # Verificando se o recurso requisitado não é de um tipo proibido
         for fileExt in serverConfig.configValue["forbiddenFiles"]:
             if self.path.endswith(fileExt):
-                log.error(f"Erro, requisitando recurso proibido:\n{self.path}")
+                log.error(f"Erro, requisitando recurso proibido:{self.path}")
                 raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
+
+        # Verificando se o tipo de recurso requisitado é permitido
+        for fileExt in serverConfig.configValue["allowedFiles"]:
+            if not self.path.endswith(fileExt):
+                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{self.path}")
+                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", self.path)
+
+        # Verificando se o recurso requisitado existe
+        if not os.path.exists(serverConfig.configValue['contentRoot'] + self.path):
+            log.error(f"Erro, requisitando recurso que não existe:{serverConfig.configValue['contentRoot'] + self.path}")
+            raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
 
         # Verificando se a versão do HTTP passada na requisição é válida
         if self.version != serverConfig.configValue["httpVersion"]:
-            log.error(f"Erro, versão do protocolo HTTP não suportada:\n{self.version}")
+            log.error(f"Erro, versão do protocolo HTTP não suportada:{self.version}")
             raise Exceptions.VersionNotSupported("Versão do Protocolo HTTP Não Suportada", self.version)
 
         # Recuperando os headers da requisição
@@ -88,16 +108,12 @@ class Request:
                 k, v = header.split(":", 1) # Separando a string em cada ":" e apenas uma vez, para evitar que argumentos que tenha ":" sejam separados tbm
             except ValueError:
                 # sanity
-                log.error(f"Erro ao interpretar cabeçalho:\n{header}")
+                log.error(f"Erro ao interpretar cabeçalho:{header}")
                 raise Exceptions.BadRequest("Requisição Mal Formatada!", header)
             
             self.headers[k] = v
     
     def __str__(self) -> str:
-        """
-        Método que retorna uma versão legível por humanos da requisição já processada
-        """
-        
         ret = self.method + " " + self.path + " " + self.version + "\n"
         
         for header, value in self.headers.items():

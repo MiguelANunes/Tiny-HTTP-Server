@@ -1,15 +1,19 @@
 import logging              # Biblioteca de criação de logs
 import Exceptions
 import ContentHandler
+import json
 from email.utils import formatdate
 from RequestHandler import Request
 from Configuration import ServerConfig # Configurações do Servidor
 from typing import Any, Union
 
 """
-Arquivo onde é definida a classe de respostas HTTP
+ResponseHandler.py
+Nesse módulo são definidas e processadas as requisições que são respondidas para o cliente 
+O construtor da classe Response recebe uma requisição enviada pelo cliente e cónstroi uma resposta adequada para ela
+Como as principais validações são feitas no módulo RequestHandler, não tenho tantas validações para fazer aqui
+As validações que são feitas são referentes ao recurso que o cliente quer acessar, isto é, se o recurso existe, se o cliente pode acessar esse recurso, etc.
 
-TODO: Melhorar essa descrição
 TODO: Ver https://stackoverflow.com/questions/5938007/what-is-the-difference-between-content-type-charset-x-and-content-encoding-x
 """
 
@@ -34,9 +38,9 @@ class Response:
         # Como esse servidor é muito simples, irei responder com a mesma versão que o cliente pediu
     def __init__(self, clientRequest:Request, serverConfig:ServerConfig, responseCodes:dict[Any,Any], contentTypes: dict[Any,Any], id: int) -> None:
         # Recuperando dados da requisição
-        self.method  = clientRequest.method
-        self.path    = "../Content" + clientRequest.path  # TODO: melhorar aqui com caminhos aceitos
-        self.version = clientRequest.version
+        self.method   = clientRequest.method
+        self.resource = "../Content" + clientRequest.path  # TODO: melhorar aqui com caminhos aceitos
+        self.version  = clientRequest.version
         
         # Inicializando código e mensagem de resposta
         self.responseCode = 100
@@ -51,7 +55,6 @@ class Response:
         self.headers["Content-Lenght"] = 0 # Valor padrão, será calculado quando o conteúdo da resposta for determinado
         
         # Inicializando o corpo da resposta
-        # TODO: Validar os casos onde esse atributo é acessado para garantir que não será aberto um tipo bytes como string
         self.body: Union[str, bytes]
         # Parâmetro que indica se o corpo da mensagem é binário ou texto
         self.contentIsBinary = False
@@ -75,7 +78,7 @@ class Response:
         
         # Definindo o corpo como uma string de JSON indicando os métodos aceitos
         methods = serverConfig.configValue["implemmentedMethods"]
-        self.body = f"{{'accepted_methods': {methods}}}"
+        self.body = f"{{\"accepted_methods\": {json.dumps(methods)}}}"
         
         # Arrumando headers
         self.headers["Content-Type"]   = "application/json"
@@ -96,7 +99,10 @@ class Response:
         """
         
         self.respondGet(serverConfig)
-        self.body = ""
+        if self.contentIsBinary:
+            self.body = bytes()
+        else:
+            self.body = ""
     
     def respondGet(self, serverConfig:ServerConfig) -> None:
         """
@@ -124,25 +130,24 @@ class Response:
             
             # Caso esteja procurando pela raiz do site, concateno index.html no final do caminho
             # para procurar o arquivo html raiz do site
-            if self.path == "../Content/":
-                path = self.path + "index.html"
+            if self.resource == "../Content/":
+                path = self.resource + "index.html"
             else:
-                path = self.path
+                path = self.resource
             
             fileContents = ContentHandler.get_resource(path, serverConfig)
         except FileNotFoundError:
-            log.error(f"Arquivo não encontrado {self.path}")
-            raise Exceptions.NotFound("Arquivo não encontrado.", self.path)
+            log.error(f"Arquivo não encontrado {self.resource}")
+            raise Exceptions.NotFound("Arquivo não encontrado.", self.resource)
         except OSError:
-            log.error(f"Erro ao recuperar recurso {self.path}")
-            raise Exceptions.InternalError(f"Erro ao recuperar recurso {self.path}.")
+            log.error(f"Erro ao recuperar recurso {self.resource}")
+            raise Exceptions.InternalError(f"Erro ao recuperar recurso {self.resource}.")
         except Exception as e:
             # Caso qualquer outro problema tenho acontecido, levanto um 418 e mando o cliente tomar no cu
             log.critical(f"Exceção {type(e)} não capturada.")
             raise Exceptions.ImTeapot("Exceção Não Capturada.")
         
         # Tendo recuperado o conteúdo do arquivo, defino ele como o corpo da minha resposta
-        # TODO: Lidar com o caso de fileContents ser do tipo bytes aqui
         self.body = fileContents
         self.contentIsBinary = type(self.body) == bytes
         
@@ -197,7 +202,7 @@ class Response:
         Dependendo do erro que ocorreu, o conteúdo e código de resposta variam
         Recebe como argumento a exceção que ocorreu para determinar o código de erro a ser enviado
         """
-        
+        # TODO: Implementar você
         pass
     
     def formatResponse(self) -> bytes:
@@ -230,7 +235,16 @@ class Response:
         return response
     
     def printHead(self) -> str:
-        # TODO: Documentar você!
+        """
+        Esse método serve como alternativa ao __str__ para casos onde o corpo da msg é binário que não foi codificado a partir da uma string
+        Ou casos onde não quero ver o corpo da msg, apenas os cabeçalhos (por exemplo para imprimir no log)
+        
+        Recebe:
+            Nada
+        
+        Retorna:
+            String contendo a primeira linha e o cabeçalho da respostas
+        """
         resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\n"
         responseHeaders  = str()
         for header, value in self.headers.items():
@@ -239,5 +253,6 @@ class Response:
         return resposeFirstLine + responseHeaders + f"ID: {self.id}\n"
     
     def __str__(self) -> str:
-        # TODO: Caso o corpo da msg seja bytes isso pode printar texto corrompido
+        if self.contentIsBinary:
+            log.warning("Chamando __str__ de requisição onde o conteúdo retornado são dados binários!")
         return self.formatResponse().decode().replace("\r", "")

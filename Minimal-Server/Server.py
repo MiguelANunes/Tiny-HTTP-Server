@@ -2,16 +2,18 @@ import socket                          # Operações sobre sockets
 import logging                         # Biblioteca de criação de logs
 import json                            # Abertura de arquivos .json
 import selectors                       # Multiplexação de input
+import sys                             # Funções do sistema
 from typing import Optional, Any       # Anotações de tipo
-from ResponseHandler import Response   # Componentes do servidor
-from RequestHandler import Request     # Componentes do servidor
-from Exceptions import HTTPException   # Componentes do servidor
+from ResponseHandler import Response   # Módulo de Respostas HTTP
+from RequestHandler import Request     # Módulo de Requisições HTTP
+from Exceptions import HTTPException   # Módulo de Exceções específicas do Servidor
 from Configuration import ServerConfig # Configurações do Servidor
 
 """
-    TODO: Descrever esse arquivo aqui
-    TODO: Fazer validações do input
-    
+Server.py
+Módulo principal do meu servidor HTTP
+Nesse módulo é inicializada a execução do servidor, as requisições são lidas vindas de uma socket e são respondidas para a mesma socket
+Mensagens HTTP são inicialmente processadas aqui, antes de seu processamento ser passado para as classes específicas
 """
 
 log = logging.getLogger("Main.Server")
@@ -129,13 +131,19 @@ def load_json_data() -> "tuple[dict[Any, Any], dict[Any, Any]]":
         Uma tupla contendo os dicionários de códigos de retorno e tipos MIME
     """
     
-    # TODO: Deveria ter um bloco try-except aqui
-    
-    with open("json/response.json") as f:
-        responseDict = json.load(f)
+    try:
+        with open("json/response.json") as f:
+            responseDict = json.load(f)
+    except (OSError, FileNotFoundError) as err:
+        log.critical("Arquivo de códigos de respostas HTTP não encontrado ou impossível de abrir! Encerrando execução")
+        sys.exit()
 
-    with open("json/mime.json") as f:
-        contentDict = json.load(f)
+    try:
+        with open("json/mime.json") as f:
+            contentDict = json.load(f)
+    except (OSError, FileNotFoundError) as err:
+        log.critical("Arquivo de códigos MIME associados a tipos de arquivos não encontrado ou impossível de abrir! Encerrando execução")
+        sys.exit()
         
     return (responseDict, contentDict)
 
@@ -180,6 +188,8 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
         # Parece ser algo parecido com pipelining (https://developer.mozilla.org/en-US/docs/Web/HTTP/Connection_management_in_HTTP_1.x#http_pipelining)
         # Mas não necessáriamente é isso
         # De qualquer forma, essa implementação consegue lidar com o problema
+        
+        # TODO: Colocar um bloco try-except-finally aqui para garantir que todas as sockets serão fechadas caso ocorra uma excessão durante a execução
         
         # Loop principal do servidor
         while True:
