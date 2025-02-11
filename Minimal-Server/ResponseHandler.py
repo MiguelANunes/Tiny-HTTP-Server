@@ -39,7 +39,7 @@ class Response:
     def __init__(self, clientRequest:Request, serverConfig:ServerConfig, responseCodes:dict[Any,Any], contentTypes: dict[Any,Any], id: int) -> None:
         # Recuperando dados da requisição
         self.method   = clientRequest.method
-        self.resource = "../Content" + clientRequest.path  # TODO: melhorar aqui com caminhos aceitos
+        self.resource = clientRequest.resource
         self.version  = clientRequest.version
         
         # Inicializando código e mensagem de resposta

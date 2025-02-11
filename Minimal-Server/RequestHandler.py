@@ -52,7 +52,7 @@ class Request:
         # Portanto é seguro fazer essa operação
         # De qualquer forma, irei fazer uma validação no input
         try:
-            self.method, self.path, self.version = firstLine.split() # Aqui estou assumindo que o whitespace no final da primeira linha já foi removido
+            self.method, self.resource, self.version = firstLine.split() # Aqui estou assumindo que o whitespace no final da primeira linha já foi removido
         except ValueError:
             log.error(f"Erro ao interpretar primeira linha da requisição:{firstLine}")
             raise Exceptions.BadRequest("Requisição Mal Formada!" ,firstLine)
@@ -64,32 +64,32 @@ class Request:
 
         # Verificando se o recurso requisitado não é proibido
         for path in serverConfig.configValue["forbiddenPaths"]:
-            if path in self.path:
-                log.error(f"Erro, requisitando recurso proibido:{self.path}")
-                raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
+            if path in self.resource:
+                log.error(f"Erro, requisitando recurso proibido:{self.resource}")
+                raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
         
         # Verificando se o recurso requisitado é permitido
         for path in serverConfig.configValue["allowedPaths"]:
-            if path not in serverConfig.configValue["contentRoot"] + self.path:
-                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{serverConfig.configValue['contentRoot'] + self.path}")
-                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", serverConfig.configValue['contentRoot'] + self.path)
+            if path not in serverConfig.configValue["contentRoot"] + self.resource:
+                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{serverConfig.configValue['contentRoot'] + self.resource}")
+                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", serverConfig.configValue['contentRoot'] + self.resource)
         
         # Verificando se o recurso requisitado não é de um tipo proibido
         for fileExt in serverConfig.configValue["forbiddenFiles"]:
-            if self.path.endswith(fileExt):
-                log.error(f"Erro, requisitando recurso proibido:{self.path}")
-                raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
+            if self.resource.endswith(fileExt):
+                log.error(f"Erro, requisitando recurso proibido:{self.resource}")
+                raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
 
         # Verificando se o tipo de recurso requisitado é permitido
         for fileExt in serverConfig.configValue["allowedFiles"]:
-            if not self.path.endswith(fileExt):
-                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{self.path}")
-                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", self.path)
+            if not self.resource.endswith(fileExt):
+                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{self.resource}")
+                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", self.resource)
 
         # Verificando se o recurso requisitado existe
-        if not os.path.exists(serverConfig.configValue['contentRoot'] + self.path):
-            log.error(f"Erro, requisitando recurso que não existe:{serverConfig.configValue['contentRoot'] + self.path}")
-            raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.path)
+        if not os.path.exists(serverConfig.configValue['contentRoot'] + self.resource):
+            log.error(f"Erro, requisitando recurso que não existe:{serverConfig.configValue['contentRoot'] + self.resource}")
+            raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
 
         # Verificando se a versão do HTTP passada na requisição é válida
         if self.version != serverConfig.configValue["httpVersion"]:
@@ -114,7 +114,7 @@ class Request:
             self.headers[k] = v
     
     def __str__(self) -> str:
-        ret = self.method + " " + self.path + " " + self.version + "\n"
+        ret = self.method + " " + self.resource + " " + self.version + "\n"
         
         for header, value in self.headers.items():
             ret += f"{header}: {value}\n"
