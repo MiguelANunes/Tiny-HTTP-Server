@@ -1,16 +1,17 @@
-import socket                                # Operações sobre sockets
-import logging                               # Biblioteca de criação de logs
-import json
-from typing import Optional, Any             # Anotações de tipo
-from ResponseHandler import Response         # Componentes do servidor
-from RequestHandler import Request           # Componentes do servidor
-from Exceptions import HTTPException         # Componentes do servidor
+import socket                          # Operações sobre sockets
+import logging                         # Biblioteca de criação de logs
+import json                            # Abertura de arquivos .json
+import selectors                       # Multiplexação de input
+from typing import Optional, Any       # Anotações de tipo
+from ResponseHandler import Response   # Componentes do servidor
+from RequestHandler import Request     # Componentes do servidor
+from Exceptions import HTTPException   # Componentes do servidor
 from Configuration import ServerConfig # Configurações do Servidor
 
 """
     TODO: Descrever esse arquivo aqui
     TODO: Fazer validações do input
-    TODO: Talvez precise processar requisições de outra forma, ver: https://stackoverflow.com/questions/29023885/python-socket-readline-without-socket-makefile
+    
 """
 
 log = logging.getLogger("Main.Server")
@@ -41,8 +42,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
     # Ouvindo a mensagem que o cliente está mandando para o servidor
     with clientSocket.makefile() as incomingMessage:
         
-        # deve ter um jeito melhor de fazer isso, mas isso fica para depois
-        # TODO: Fazer de jeito melhor
+        # Talvez tenha um jeito melhor de fazer isso
         linesRead = 0
         blanksRead = 0
         maxBlanks = 2
@@ -163,27 +163,55 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
         # Pegando o host da configuração e a abrindo a conexão
         host = serverConfig.configValue["host"]
         serverSocket.bind((host, port))
-        serverSocket.listen(100) # Servidor vai aceitar no máximo 5 conexões simultâneas
+        serverSocket.listen(10) # Servidor vai aceitar no máximo 10 conexões simultâneas
+        
+        # Carregando a socket do servidor no seletor para lidar com múltiplas conexões simultâneas
+        serverSocket.setblocking(False) # socket não pode estar em modo bloqueante para isso funcionar
+        seletor = selectors.DefaultSelector()
+        # Registrando a socket no seletor de modo que quando ela estiver disponível para ser lida poderei acessar ela
+        seletor.register(serverSocket, selectors.EVENT_READ)
         
         log.info(f"Servidor funcinando em localhost:{port}")
         print(f"Servidor funcinando em localhost:{port}")
         
         resp, typ = load_json_data()
         
+        # Preciso usar seletores pois navegadores enviam múltiplas requisições de uma vez
+        # Parece ser algo parecido com pipelining (https://developer.mozilla.org/en-US/docs/Web/HTTP/Connection_management_in_HTTP_1.x#http_pipelining)
+        # Mas não necessáriamente é isso
+        # De qualquer forma, essa implementação consegue lidar com o problema
+        
         # Loop principal do servidor
         while True:
-            # Recebendo conexões de um cliente
-            # Quando um cliente conecta, ele é associado a uma nova porta e seu endereço é capturado
-            clientSocket, address = serverSocket.accept()
+            # Recebendo conexões 
+            incomingConnections = seletor.select()
             
-            print(f"Conexão vinda de {address}")
-            
-            success = handle_request(clientSocket, serverConfig, resp, typ)
-            
-            if success:
-                print("Requisição respondida com sucesso!\n")
-            else:
-                print("Erro na requisição!\n")
+            for readySocket, _ in incomingConnections:
+                
+                # sanity
+                assert isinstance(readySocket.fileobj, socket.socket)
+                
+                if readySocket.fileobj is serverSocket:
+                    # Quando a socket pronta para ser lida é a socket do servidor, aceito a conexão que está chegando e 
+                    # registro essa conexão na fila de conexões para ser processada
+                    
+                    clientSocket, address = readySocket.fileobj.accept()
+                    clientSocket.setblocking(False)
+                    seletor.register(clientSocket, selectors.EVENT_READ)
+                    
+                    print(f"Conexão vinda de {address}")
+                
+                else:
+                    # Caso não seja a socket do servidor, processo a conexão que chegou
+                    success = handle_request(readySocket.fileobj, serverConfig, resp, typ)
+                    # TODO: Caso queira respeitar o Connection: keep-alive do cliente, não deveria remover a socket daqui
+                    seletor.unregister(readySocket.fileobj)
+                    readySocket.fileobj.close()
+                            
+                    if success:
+                        print("Requisição respondida com sucesso!\n")
+                    else:
+                        print("Erro na requisição!\n")
         
     return
     
