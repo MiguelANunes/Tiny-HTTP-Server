@@ -43,30 +43,30 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
         
         # deve ter um jeito melhor de fazer isso, mas isso fica para depois
         # TODO: Fazer de jeito melhor
-        aux = 0
-        blanks = 0
-        max_blanks = 2
+        linesRead = 0
+        blanksRead = 0
+        maxBlanks = 2
         
         # Processando a requisição que está chegando
         for line in incomingMessage:
         
-            if aux == 0:
+            if linesRead == 0:
                 HTTPStartLine = line
                 # Caso o método não tenha um corpo, não preciso contar duas linhas vazias
-                max_blanks = max_blanks - 1 if not has_body(HTTPStartLine) else max_blanks
+                maxBlanks = maxBlanks - 1 if not has_body(HTTPStartLine) else maxBlanks
         
-            if aux > 0 and blanks == 0 and (line != "\r\n" or line != "\n"):
+            if linesRead > 0 and blanksRead == 0 and (line != "\r\n" or line != "\n"):
                 # Cabeçalhos acabam após uma linha vazia
                 HTTPHeaders += line
                 
-            if aux > 0 and blanks == 1 and (line != "\r\n" or line != "\n"):
+            if linesRead > 0 and blanksRead == 1 and (line != "\r\n" or line != "\n"):
                 # Corpo da mensagem começa após uma linha vazia, mas não pode ele mesmo conter uma linha vazia
                 HTTPBody += line
                 
             if line == "\r\n" or line == "\n":
-                blanks += 1
+                blanksRead += 1
             
-            if blanks == max_blanks:
+            if blanksRead == maxBlanks:
                 # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
                 
                 try:
@@ -112,7 +112,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                     log.warning(repr(exception))
                     return False
 
-            aux += 1
+            linesRead += 1
     
     return False
 
