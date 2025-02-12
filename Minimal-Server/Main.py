@@ -17,7 +17,11 @@ Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições O
 # TODO: Implementar uma requisição que desliga o servidor graciosamente
 # TODO: Implementar decorators em algumas validações e verificações
 # TODO: Talvez seria interessante separar os módulos de manipulação de requisições em uma superclasse de requisições genéricas
-#       e várias subclasses de requisições específicas
+#       e várias subclasses de requisições específicas 
+#   Relevante: https://stackoverflow.com/questions/35765454/what-is-a-factory-in-oop
+#              https://en.wikipedia.org/wiki/Factory_(object-oriented_programming)
+#              https://stackoverflow.com/questions/12433584/should-a-class-constructor-return-a-subclass 
+#              https://stackoverflow.com/questions/7840911/python-inheritance-return-subclass
 # Idem para respostas (talvez até mais importante para respostas)
 
 # Configurando o sistema de logging da biblioteca logging
