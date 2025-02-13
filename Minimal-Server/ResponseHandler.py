@@ -13,8 +13,6 @@ Nesse módulo são definidas e processadas as requisições que são respondidas
 O construtor da classe Response recebe uma requisição enviada pelo cliente e cónstroi uma resposta adequada para ela
 Como as principais validações são feitas no módulo RequestHandler, não tenho tantas validações para fazer aqui
 As validações que são feitas são referentes ao recurso que o cliente quer acessar, isto é, se o recurso existe, se o cliente pode acessar esse recurso, etc.
-
-TODO: Ver https://stackoverflow.com/questions/5938007/what-is-the-difference-between-content-type-charset-x-and-content-encoding-x
 """
 
 log = logging.getLogger("Main.Server.Response")
@@ -47,11 +45,11 @@ class Response:
         self.responseMsg: str
         
         # Inicializando os headers da resposta
-        self.headers = dict()
+        self.headers                   = dict()
         self.headers["Server"]         = serverConfig.configValue["serverName"]
         self.headers["Date"]           = formatdate(timeval=None, localtime=False, usegmt=True)
         self.headers["Connection"]     = "close" # Não é usual fechar a conexão depois de toda msg, mas o protocolo permite
-        self.headers["Content-Type"]   = "text/html; charset=utf-8" # Valor padrão, muda dependendo do que está sendo retornado
+        self.headers["Content-Type"]   = "text/plain; charset=utf-8" # Valor padrão, muda dependendo do que está sendo retornado
         self.headers["Content-Lenght"] = 0 # Valor padrão, será calculado quando o conteúdo da resposta for determinado
         
         # Inicializando o corpo da resposta
@@ -72,7 +70,10 @@ class Response:
         Essa é a requisição mais simples, pois apenas quer saber quais são os métodos que este servidor aceita
         Nesse caso, apenas GET, HEAD e OPTIONS
         
-        Recebe e Retona:
+        Recebe:
+            [ServerConfig] serverConfig: Dados de configuração do servidor 
+        
+        Retona:
             Nada
         """
         
@@ -94,15 +95,56 @@ class Response:
         Essa requisição retorna o que uma requisição GET retornaria, porém omitindo o corpo da mensagem, contendo apenas os headers
         Logo, para gerar essa resposta, gero a resposta de um GET e removo o corpo da mensagem
         
-        Recebe e Retona:
+        Recebe 
+            [ServerConfig] serverConfig: Dados de configuração do servidor
+            
+        Retona:
             Nada
         """
         
-        self.respondGet(serverConfig)
-        if self.contentIsBinary:
-            self.body = bytes()
-        else:
-            self.body = ""
+        # TODO: Aqui eu só copiei praticamente todo o método de responder um GET, visto que um HEAD é um GET sem corpo de mensagem
+        # Certamente tem uma maneira melhor de fazer isso, contudo eu não consigo pensar numa agora
+        
+        # Calculando o caminho do recurso a ser acessado
+        path = serverConfig.configValue["content_root"] + self.resource
+        
+        try:
+            # Caso esteja procurando pela raiz do site, concateno index.html no final do caminho
+            # para procurar o arquivo html raiz do site
+            if path == serverConfig.configValue["content_root"] + "/":
+                path += "index.html"
+            
+            contentSize = ContentHandler.get_sizeof_resource(path, serverConfig)
+        except FileNotFoundError:
+            log.error(f"Arquivo não encontrado {self.resource}")
+            raise Exceptions.NotFound("Arquivo não encontrado.", self.resource)
+        except OSError:
+            log.error(f"Erro ao recuperar recurso {self.resource}")
+            raise Exceptions.InternalError(f"Erro ao recuperar recurso {self.resource}.")
+        except Exception as e:
+            # Caso qualquer outro problema tenho acontecido, levanto um 418 e mando o cliente tomar no cu
+            # TODO: Pensar qual seria a melhor exceção para ser levantada aqui
+            log.critical(f"Exceção {type(e)} não capturada.")
+            raise Exceptions.ImTeapot("Exceção Não Capturada.")
+        
+        # Definindo o tamanho do conteúdo
+        self.headers["Content-Lenght"] = contentSize
+        
+        # Para arrumar o Content-Type, tenho que descobrir o tipo de arquivo que foi requisitado
+        # Para isso, preciso pegar a extensão do recurso requisitado
+        requestedFile = path.split("/")[-1] # Retorna uma string
+        # Dada a string, separo ela no ponto (.split(".")) e pego o que está depois do ponto ([1])
+        fileExt       = requestedFile.split(".")[1]
+        # Dada a única extensão, recupero qual o Content-Type associado a ela
+        contentType   = self.MIMEContentTypes[fileExt]
+        # Caso esteja retornando um arquio texto, indico que ele é codificado com utf-8
+        contentType   = contentType if self.contentIsBinary else contentType + "; charset=utf-8"
+        
+        self.headers["Content-Type"] = contentType
+        
+        # Por fim, defino o código e msg de retorno
+        self.responseCode = 200
+        self.responseMsg  = self.HTTPResponseCodes[str(self.responseCode)]["message"]
     
     def respondGet(self, serverConfig:ServerConfig) -> None:
         """
@@ -110,30 +152,21 @@ class Response:
         Uma requisição GET retorna um recurso presente no servidor, usando alguma codificação pré-definida
         Nesse caso, estarei retornando apenas arquivos HTML/CSS codificado como UTF-8
         
-        Recebe e Retona:
+        Recebe 
+            [ServerConfig] serverConfig: Dados de configuração do servidor
+        
+        Retona:
             Nada
         """
         
-        # Para determinar o arquivo que será retornado, preciso verificar o caminho que foi passado na requisição
-        # Caso seja apenas "/", respondo com Contents/index.html
-        # Caso seja algo mais elaborado, abro essa pasta e respondo com o arquivo .html dentro dela
-        # Caso algum erro ocorra, lanço erro 404
-        
-        # Todo o conteúdo possível de ser requisitado está na pasta Content
-        # Mais ainda, (eu acho que) todo path possível de ser requisitado começa com "/"
-        # Logo, basta concatenar o path requisitado ao final do nome da pasta para abrir aquele path
-        
-        # TODO: Validar se arquivos podem ser acessados aqui
+        # Calculando o caminho do recurso a ser acessado
+        path = serverConfig.configValue["content_root"] + self.resource
         
         try:
-            # TODO: Lidar com os caminhos aceitos aqui
-            
             # Caso esteja procurando pela raiz do site, concateno index.html no final do caminho
             # para procurar o arquivo html raiz do site
-            if self.resource == "../Content/":
-                path = self.resource + "index.html"
-            else:
-                path = self.resource
+            if path == serverConfig.configValue["content_root"] + "/":
+                path += "index.html"
             
             fileContents = ContentHandler.get_resource(path, serverConfig)
         except FileNotFoundError:
@@ -144,6 +177,7 @@ class Response:
             raise Exceptions.InternalError(f"Erro ao recuperar recurso {self.resource}.")
         except Exception as e:
             # Caso qualquer outro problema tenho acontecido, levanto um 418 e mando o cliente tomar no cu
+            # TODO: Pensar qual seria a melhor exceção para ser levantada aqui
             log.critical(f"Exceção {type(e)} não capturada.")
             raise Exceptions.ImTeapot("Exceção Não Capturada.")
         
@@ -161,10 +195,12 @@ class Response:
         # Para arrumar o Content-Type, tenho que descobrir o tipo de arquivo que foi requisitado
         # Para isso, preciso pegar a extensão do recurso requisitado
         requestedFile = path.split("/")[-1] # Retorna uma string
-        # Dada a única string da lista (requestedFile[0]), separo ela no ponto (.split(".")) e pego o que está depois do ponto ([1]), incluindo o próprio ponto ("."+...)
+        # Dada a string, separo ela no ponto (.split(".")) e pego o que está depois do ponto ([1])
         fileExt       = requestedFile.split(".")[1]
         # Dada a única extensão, recupero qual o Content-Type associado a ela
-        contentType   = self.MIMEContentTypes[fileExt] + "; charset=utf-8"
+        contentType   = self.MIMEContentTypes[fileExt]
+        # Caso esteja retornando um arquio texto, indico que ele é codificado com utf-8
+        contentType   = contentType if self.contentIsBinary else contentType + "; charset=utf-8"
         
         self.headers["Content-Type"] = contentType
         
@@ -173,6 +209,7 @@ class Response:
         self.responseMsg  = self.HTTPResponseCodes[str(self.responseCode)]["message"]
     
     def respondError(self) -> None:
+        # TODO: Implementar você
         pass
     
     def prepareResponse(self, serverConfig:ServerConfig) -> None:
@@ -181,7 +218,10 @@ class Response:
         Dependendo do método utilizado pelo cliente, o conteúdo da resposta varia
         Esse método não gera a mensagem em formato texto que será enviada ao cliente, mas processa todos os dados necessários para gerar ela
         
-        Recebe e Retorna:
+        Recebe 
+            [ServerConfig] serverConfig: Dados de configuração do servidor
+            
+        Retorna:
             Nada
         """
         
@@ -216,6 +256,8 @@ class Response:
         Retorna:
             A resposta formatada codificada em bytes
         """
+        
+        # TODO: Validar aqui que o corpo da msg não será None
         
         resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\r\n".encode("utf-8")
         

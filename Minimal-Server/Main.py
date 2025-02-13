@@ -16,13 +16,13 @@ Retorna {"accepted_methods": ["GET", "HEAD", "OPTIONS"]} para as requisições O
 
 # TODO: Implementar uma requisição que desliga o servidor graciosamente
 # TODO: Implementar decorators em algumas validações e verificações
-# TODO: Talvez seria interessante separar os módulos de manipulação de requisições em uma superclasse de requisições genéricas
-#       e várias subclasses de requisições específicas 
+# TODO: Talvez seria interessante separar os módulos de manipulação de respostas em uma superclasse de respostas genéricas
+#       e várias subclasses de respostas específicas 
 #   Relevante: https://stackoverflow.com/questions/35765454/what-is-a-factory-in-oop
 #              https://en.wikipedia.org/wiki/Factory_(object-oriented_programming)
 #              https://stackoverflow.com/questions/12433584/should-a-class-constructor-return-a-subclass 
 #              https://stackoverflow.com/questions/7840911/python-inheritance-return-subclass
-# Idem para respostas (talvez até mais importante para respostas)
+# Idem para requisições (porém menos importante)
 
 # Configurando o sistema de logging da biblioteca logging
 log = logging.getLogger("Main")
@@ -105,9 +105,10 @@ def main() -> None:
     
     print("migs' HTTP Server")
     
-    print("Para definir a porta que o servidor irá usar para receber requisições, forneça ela na linha de comando quando iniciar o servidor")
-    print("\tPor exemplo, 'python Main.py 12345'")
-    print("Por padrão, o servidor usará a porta 9999")
+    # TODO: Colocar esses informes em outro lugar
+    # print("Para definir a porta que o servidor irá usar para receber requisições, forneça ela na linha de comando quando iniciar o servidor")
+    # print("\tPor exemplo, 'python Main.py 12345'")
+    # print("Por padrão, o servidor usará a porta 9999")
     
     # Recuperando uma possível porta passada na linha de comando
     port = get_port()

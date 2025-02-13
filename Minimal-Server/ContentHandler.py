@@ -20,7 +20,7 @@ log = logging.getLogger("Main.Server.Response.Content")
 # Função anônima que verifica se um arquivo é um arquivo texto, se não for é um binário
 isTextFile = lambda f: any([f.endswith(ext) for ext in [".html", ".css", ".scss", ".js", ".txt", ".json", ".csv", ".xml"]])
 
-def get_directory_content(path:str, serverConfig:ServerConfig) -> Optional[list[str]]:
+def get_directory_content(path:str, serverConfig:ServerConfig) -> list[str]:
     """
     Função que vai abrir a pasta indicada pelo caminho path e retornar todos os arquivos dentro dela
     Caso a pasta não seja encontrada, lança uma exceção para ser tratada na função que chamou essa
@@ -50,8 +50,8 @@ def get_directory_content(path:str, serverConfig:ServerConfig) -> Optional[list[
         raise err
 
     if len(files) == 0:
-        # Caso não tenha achado nenhum arquivo, retorno None para indicar para a função chamadora que deu erro
-        return None
+        # Caso não tenha achado nenhum arquivo, jogo uma exceção
+        raise FileNotFoundError
 
     return files
 
@@ -110,6 +110,46 @@ def get_file_contents(filePath:str) -> Union[str, bytes]:
         log.info(f"Procurando arquivo binário {filePath}")
         return get_binary_file_contents(filePath)
 
+def get_sizeof_resource(resourcePath:str, serverConfig:ServerConfig) -> int:
+    """
+    Função que vai receber um caminho para um recurso dentro da pasta Content/ e vai retornar o 
+        tamanho desse recurso
+    Nessa função assumo que já foi verificado se o recurso pode ser acessado
+    
+    Recebe:
+        [str] resourcePath: Caminho para um arquivo na pasta Content/
+        [ServerConfig] serverConfig: Dados de configuração do servidor
+    
+    Retorna:
+        Int indicando o tamanho do recurso em bytes
+    """
+    
+    # TODO: Aqui só copiei a função get_resource abaixo, pensar se tem uma maneira melhor de fazer isso
+    
+    # Primeiro verifico se o caminho é uma pasta
+    if not resourcePath.endswith("/"):
+        # Se não, pego o tamanho desse arquivo
+        return os.path.getsize(resourcePath)
+    
+    # Se sim, recupero os conteúdos dessa pasta numa lista
+    try:
+        files = get_directory_content(resourcePath, serverConfig)
+    except (OSError, FileNotFoundError) as err:
+        raise err
+    
+    if len(files) == 1:
+        # Caso tenha apenas um arquivo retorno o tamanho dele
+        return os.path.getsize(files[0])
+    
+    for file in files:
+        # Caso tenha múltiplos arquivos, verifico se tem um arquivo chamado "index.html" e retorno seu tamanho
+        if "index.html" in file:
+            return os.path.getsize(files[files.index("index.html")])
+    
+    # Caso não tenha um index.html, retorna o tamanho do primeiro arquivo da lista
+    log.warning(f"A pasta {resourcePath} contém múltiplos arquivos, nenhum dos quais se chama index.html, estou recuperando o primeiro arquivo encontrado.")
+    return os.path.getsize(files[0])
+
 def get_resource(resourcePath:str, serverConfig:ServerConfig) -> Union[str, bytes]:
     """
     Função que vai receber um caminho para um recurso dentro da pasta Content/ e vai retornar o 
@@ -128,23 +168,16 @@ def get_resource(resourcePath:str, serverConfig:ServerConfig) -> Union[str, byte
     
     log.info(f"Procurando o recurso {resourcePath}")
     
-    # Inicializando a lista de arquivos na pasta para garantir que terei acesso a ela em todas as branches do if abaixo
-    files: Optional[list[str]] = []
-    
     # Primeiro verifico se o caminho é uma pasta
-    if resourcePath.endswith("/"):
-        # Se sim, recupero os conteúdos dessa pasta numa lista
-        try:
-            files = get_directory_content(resourcePath, serverConfig)
-            # Caso não tenha achado nenhum arquivo válido naquela pasta, joga um erro 404
-            # Não vou lidar com erros aqui, vou delegar isso para a função chamadora
-            if files is None:
-                raise FileNotFoundError
-        except (OSError, FileNotFoundError) as err:
-            raise err
-    else:
+    if not resourcePath.endswith("/"):
         # Se não, verifico que tipo de arquivo ele é e leio ele
         return get_file_contents(resourcePath)
+    
+    # Se sim, recupero os conteúdos dessa pasta numa lista
+    try:
+        files = get_directory_content(resourcePath, serverConfig)
+    except (OSError, FileNotFoundError) as err:
+        raise err
     
     if len(files) == 1:
         # Caso tenha apenas um arquivo recupero o conteúdo dele e retorno isso
@@ -153,7 +186,6 @@ def get_resource(resourcePath:str, serverConfig:ServerConfig) -> Union[str, byte
     for file in files:
         # Caso tenha múltiplos arquivos, verifico se tem um arquivo chamado "index.html" e retorno seu conteúdo
         if "index.html" in file:
-            # Se sim, abro ele
             return get_file_contents(files[files.index("index.html")])
     
     # Caso não tenha um index.html, retorna o primeiro arquivo da lista

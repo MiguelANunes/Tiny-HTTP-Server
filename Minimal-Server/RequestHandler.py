@@ -8,7 +8,7 @@ from Configuration import ServerConfig # Módulo de configurações do Servidor
 RequestHandler.py
 Nesse módulo são definidas e processadas as requisições enviadas pelo cliente
 O construtor da classe recebe os componentes da requisião em formato string e verifica se a requisição é válida
-Não verifico se o arquivo requisitado
+Também são feitas validações sobre o recurso requisitado
 """
 
 log = logging.getLogger("Main.Server.Request")

@@ -69,6 +69,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                 blanksRead += 1
             
             if blanksRead == maxBlanks:
+                # TODO: Talvez esse if não será necessário e todo processamento da mensagem deva ocorrer fora do with, testar mais
                 # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
                 
                 try:
@@ -189,39 +190,53 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
         # Mas não necessáriamente é isso
         # De qualquer forma, essa implementação consegue lidar com o problema
         
-        # TODO: Colocar um bloco try-except-finally aqui para garantir que todas as sockets serão fechadas caso ocorra uma excessão durante a execução
+        incomingConnections = []
         
-        # Loop principal do servidor
-        while True:
-            # Recebendo conexões 
-            incomingConnections = seletor.select()
+        try:
+            # Loop principal do servidor
+            while True:
+                # Recebendo conexões 
+                incomingConnections = seletor.select()
+                
+                for readySocket, _ in incomingConnections:
+                    
+                    # sanity
+                    assert isinstance(readySocket.fileobj, socket.socket)
+                    
+                    if readySocket.fileobj is serverSocket:
+                        # Quando a socket pronta para ser lida é a socket do servidor, aceito a conexão que está chegando e 
+                        # registro essa conexão na fila de conexões para ser processada
+                        
+                        clientSocket, address = readySocket.fileobj.accept()
+                        clientSocket.setblocking(False)
+                        seletor.register(clientSocket, selectors.EVENT_READ)
+                        
+                        print(f"Conexão vinda de {address}")
+                    
+                    else:
+                        # Caso não seja a socket do servidor, processo a conexão que chegou
+                        success = handle_request(readySocket.fileobj, serverConfig, resp, typ)
+                        # TODO: Caso queira respeitar o Connection: keep-alive do cliente, não deveria remover a socket daqui
+                        seletor.unregister(readySocket.fileobj)
+                        readySocket.fileobj.shutdown(socket.SHUT_RDWR)
+                        readySocket.fileobj.close()
+                                
+                        if success:
+                            print("Requisição respondida com sucesso!\n")
+                        else:
+                            print("Erro na requisição!\n")
+        except Exception as err: # Caso ocorra qualquer excessão que não foi lidada anteriormente, fecho todas as conexões
+            if err is KeyboardInterrupt:
+                log.warning("Execução do servidor encerrada pelo teclado! Fechando todas as conexões abertas.")
+            else:
+                log.critical("Exceção inesperada! Fechando todas as conexões abertas.")
             
             for readySocket, _ in incomingConnections:
-                
                 # sanity
                 assert isinstance(readySocket.fileobj, socket.socket)
                 
-                if readySocket.fileobj is serverSocket:
-                    # Quando a socket pronta para ser lida é a socket do servidor, aceito a conexão que está chegando e 
-                    # registro essa conexão na fila de conexões para ser processada
-                    
-                    clientSocket, address = readySocket.fileobj.accept()
-                    clientSocket.setblocking(False)
-                    seletor.register(clientSocket, selectors.EVENT_READ)
-                    
-                    print(f"Conexão vinda de {address}")
-                
-                else:
-                    # Caso não seja a socket do servidor, processo a conexão que chegou
-                    success = handle_request(readySocket.fileobj, serverConfig, resp, typ)
-                    # TODO: Caso queira respeitar o Connection: keep-alive do cliente, não deveria remover a socket daqui
-                    seletor.unregister(readySocket.fileobj)
-                    readySocket.fileobj.close()
-                            
-                    if success:
-                        print("Requisição respondida com sucesso!\n")
-                    else:
-                        print("Erro na requisição!\n")
+                readySocket.fileobj.shutdown(socket.SHUT_RDWR)
+                readySocket.fileobj.close()
         
     return
     
