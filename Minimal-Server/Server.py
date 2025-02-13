@@ -71,6 +71,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
             if blanksRead == maxBlanks:
                 # TODO: Talvez esse if não será necessário e todo processamento da mensagem deva ocorrer fora do with, testar mais
                 # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
+                # Ver: https://stackoverflow.com/a/69859356
                 
                 try:
                     global id
@@ -83,7 +84,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                     log.info(f"\n\n{str(clientRequest)}")
                     
                     # Gero o objeto de resposta a partir da requisição
-                    responseToClient = Response(clientRequest, serverConfig, responses, types, id)
+                    responseToClient = Response.createResponse(clientRequest, serverConfig, responses, types, id)
                     responseToClient.prepareResponse(serverConfig) # Preparando a resposta para ser eviada
                     
                     log.info(f"Resposta preparada e pronta para ser enviada:")

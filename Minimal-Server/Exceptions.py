@@ -24,7 +24,8 @@ class BadRequest(HTTPException): # 400
     def __init__(self, message:str, badComp:str) -> None:
         super().__init__(message) # Mensagem da exceção
         
-        self.badComp   = badComp # O componente específico que estava errado
+        self.badComp = badComp # O componente específico que estava errado
+        self.code    = 400     # Código do erro  
         
 class Forbidden(HTTPException): # 403
     """
@@ -35,6 +36,7 @@ class Forbidden(HTTPException): # 403
         super().__init__(message) # Mensagem da exceção
         
         self.requestedPath = requestedPath # O caminho que o cliente pediu
+        self.code          = 403           # Código do erro
 
 class NotFound(HTTPException): # 404
     """
@@ -45,6 +47,7 @@ class NotFound(HTTPException): # 404
         super().__init__(message) # Mensagem da exceção
         
         self.requestedPath = requestedPath # O caminho que o cliente pediu
+        self.code          = 404           # Código do erro
 
 class ImTeapot(HTTPException): # 418
     """
@@ -53,6 +56,7 @@ class ImTeapot(HTTPException): # 418
     
     def __init__(self, message:str) -> None:
         super().__init__(message) # Mensagem da exceção
+        self.code = 418 # Código do erro
         
 class InternalError(HTTPException): # 500
     """
@@ -61,6 +65,7 @@ class InternalError(HTTPException): # 500
     
     def __init__(self, message:str) -> None:
         super().__init__(message) # Mensagem da exceção
+        self.code = 500 # Código do erro
         
 class MethodNotImplemented(HTTPException): # 501
     """
@@ -71,6 +76,7 @@ class MethodNotImplemented(HTTPException): # 501
         super().__init__(message) # Mensagem da exceção
         
         self.method = method # Método não suportado que foi enviado na requisição
+        self.code   = 501    # Código do erro
         
 class VersionNotSupported(HTTPException): # 505
     """
@@ -81,3 +87,4 @@ class VersionNotSupported(HTTPException): # 505
         super().__init__(message) # Mensagem da exceção
         
         self.version = version # Versão não suportada que foi enviado na requisição
+        self.code    = 505     # Código do erro

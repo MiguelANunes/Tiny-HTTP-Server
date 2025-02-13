@@ -1,7 +1,7 @@
 import logging                   # Biblioteca de criação de logs
 import tomllib                   # Para acessar arquivos do sistema
-from typing import Optional, Any # Anotações de tipo
 import sys
+from typing import Optional, Any # Anotações de tipo
 
 """
 Configuration.py
