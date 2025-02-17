@@ -213,13 +213,15 @@ class GetResponse(Response):
             Nada
         """
         
+        log.info("Processando requisição GET")
+        
         # Calculando o caminho do recurso a ser acessado
-        path = serverConfig.configValue["content_root"] + self.resource
+        path = serverConfig.configValue["contentRoot"] + self.resource
         
         try:
-            # Caso esteja procurando pela raiz do site, concateno index.html no final do caminho
+            # Caso esteja procurando por uma pasta, concateno index.html no final do caminho
             # para procurar o arquivo html raiz do site
-            if path == serverConfig.configValue["content_root"] + "/":
+            if path.endswith("/"):
                 path += "index.html"
             
             fileContents = ContentHandler.get_resource(path, serverConfig)
@@ -230,7 +232,7 @@ class GetResponse(Response):
             log.error(f"Erro ao recuperar recurso {self.resource}")
             raise Exceptions.InternalError(f"Erro ao recuperar recurso {self.resource}.")
         except Exception as e:
-            # Caso qualquer outro problema tenho acontecido, levanto um 418 e mando o cliente tomar no cu
+            # Caso qualquer outro problema tenho acontecido, levanto um 418
             # TODO: Pensar qual seria a melhor exceção para ser levantada aqui
             log.critical(f"Exceção {type(e)} não capturada.")
             raise Exceptions.ImTeapot("Exceção Não Capturada.")
@@ -241,7 +243,8 @@ class GetResponse(Response):
         
         # E arrumo os headers
         if self.contentIsBinary:
-            self.headers["Content-Lenght"] = len(self.body)
+            self.headers["Content-Lenght"]   = len(self.body)
+            self.headers["Content-Encoding"] = "gzip"
         else:
             self.headers["Content-Lenght"] = len(self.body.encode("utf-8")) #type: ignore
             # Linter estava reclamando do .encode pois não consegue inferir que o tipo de self.body sempre será str nessa branch
@@ -287,13 +290,15 @@ class HeadResponse(Response):
         # TODO: Aqui eu só copiei praticamente todo o método de responder um GET, visto que um HEAD é um GET sem corpo de mensagem
         # Certamente tem uma maneira melhor de fazer isso, contudo eu não consigo pensar numa agora
         
+        log.info("Processando requisição HEAD")
+        
         # Calculando o caminho do recurso a ser acessado
-        path = serverConfig.configValue["content_root"] + self.resource
+        path = serverConfig.configValue["contentRoot"] + self.resource
         
         try:
             # Caso esteja procurando pela raiz do site, concateno index.html no final do caminho
             # para procurar o arquivo html raiz do site
-            if path == serverConfig.configValue["content_root"] + "/":
+            if path == serverConfig.configValue["contentRoot"] + "/":
                 path += "index.html"
             
             contentSize = ContentHandler.get_sizeof_resource(path, serverConfig)

@@ -226,18 +226,26 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
                             print("Requisição respondida com sucesso!\n")
                         else:
                             print("Erro na requisição!\n")
-        except Exception as err: # Caso ocorra qualquer excessão que não foi lidada anteriormente, fecho todas as conexões
-            if err is KeyboardInterrupt:
+        except (KeyboardInterrupt, Exception) as err: 
+            # Caso ocorra qualquer excessão que não foi lidada anteriormente, fecho todas as conexões
+            # Apenas "except Exception" não captura exceções de KeyboardInterrupt, pois elas herdam da classe Exception
+            if type(err) is KeyboardInterrupt:
                 log.warning("Execução do servidor encerrada pelo teclado! Fechando todas as conexões abertas.")
+                print("\nExecução do servidor encerrada pelo teclado! Fechando todas as conexões abertas.")
             else:
                 log.critical("Exceção inesperada! Fechando todas as conexões abertas.")
+                print("\nExceção inesperada! Fechando todas as conexões abertas.")
             
             for readySocket, _ in incomingConnections:
                 # sanity
                 assert isinstance(readySocket.fileobj, socket.socket)
                 
-                readySocket.fileobj.shutdown(socket.SHUT_RDWR)
-                readySocket.fileobj.close()
+                try:                
+                    readySocket.fileobj.shutdown(socket.SHUT_RDWR)
+                    readySocket.fileobj.close()
+                except OSError:
+                    # As vezes acontece de tentar fechar uma socket já fechada, nesse caso só ignoro a socket e vida que segue
+                    pass
         
     return
     
