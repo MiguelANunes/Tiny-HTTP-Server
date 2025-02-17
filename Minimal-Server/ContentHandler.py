@@ -181,13 +181,13 @@ def get_resource(resourcePath:str, serverConfig:ServerConfig) -> Union[str, byte
     
     if len(files) == 1:
         # Caso tenha apenas um arquivo recupero o conteúdo dele e retorno isso
-        return get_file_contents(files[0])
+        return get_file_contents(resourcePath + files[0])
     
     for file in files:
         # Caso tenha múltiplos arquivos, verifico se tem um arquivo chamado "index.html" e retorno seu conteúdo
         if "index.html" in file:
-            return get_file_contents(files[files.index("index.html")])
+            return get_file_contents(resourcePath + files[files.index("index.html")])
     
     # Caso não tenha um index.html, retorna o primeiro arquivo da lista
     log.warning(f"A pasta {resourcePath} contém múltiplos arquivos, nenhum dos quais se chama index.html, estou recuperando o primeiro arquivo encontrado.")
-    return get_file_contents(files[0])
+    return get_file_contents(resourcePath + files[0])

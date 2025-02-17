@@ -69,27 +69,27 @@ class Request:
                 raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
         
         # Verificando se o recurso requisitado é permitido
-        for path in serverConfig.configValue["allowedPaths"]:
-            if path not in serverConfig.configValue["contentRoot"] + self.resource:
-                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{serverConfig.configValue['contentRoot'] + self.resource}")
-                raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", serverConfig.configValue['contentRoot'] + self.resource)
+        if not any([path in serverConfig.configValue["contentRoot"] + self.resource for path in serverConfig.configValue["allowedPaths"]]):
+            log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos: {serverConfig.configValue['contentRoot'] + self.resource}")
+            raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", serverConfig.configValue['contentRoot'] + self.resource)
         
         # Verificando se o recurso requisitado não é de um tipo proibido
-        for fileExt in serverConfig.configValue["forbiddenFiles"]:
-            if self.resource.endswith(fileExt):
-                log.error(f"Erro, requisitando recurso proibido:{self.resource}")
-                raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
+        if not self.resource.endswith("/"):
+            for fileExt in serverConfig.configValue["forbiddenFiles"]:
+                if self.resource.endswith(fileExt):
+                    log.error(f"Erro, requisitando recurso proibido:{self.resource}")
+                    raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
 
         # Verificando se o tipo de recurso requisitado é permitido
-        for fileExt in serverConfig.configValue["allowedFiles"]:
-            if not self.resource.endswith(fileExt):
-                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos:{self.resource}")
+        if not self.resource.endswith("/"):
+            if not any([self.resource.endswith(fileExt) for fileExt in serverConfig.configValue["allowedFiles"]]):
+                log.error(f"Erro, requisitando recurso que não está na lista de recursos permitidos: {self.resource}")
                 raise Exceptions.Forbidden("Requisitando Recurso não Permitido!", self.resource)
 
         # Verificando se o recurso requisitado existe
         if not os.path.exists(serverConfig.configValue['contentRoot'] + self.resource):
             log.error(f"Erro, requisitando recurso que não existe:{serverConfig.configValue['contentRoot'] + self.resource}")
-            raise Exceptions.Forbidden("Recurso Proibido de ser Acessado!", self.resource)
+            raise Exceptions.NotFound("Recurso Não Encontrado!", self.resource)
 
         # Verificando se a versão do HTTP passada na requisição é válida
         if self.version != serverConfig.configValue["httpVersion"]:

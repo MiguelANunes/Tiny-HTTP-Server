@@ -71,6 +71,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
             if blanksRead == maxBlanks:
                 # TODO: Talvez esse if não será necessário e todo processamento da mensagem deva ocorrer fora do with, testar mais
                 # Quando ler todas as linhas da requisição enviada, começo a processar a requisição
+                # Ver: https://stackoverflow.com/a/69859356
                 
                 try:
                     global id
@@ -83,7 +84,7 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                     log.info(f"\n\n{str(clientRequest)}")
                     
                     # Gero o objeto de resposta a partir da requisição
-                    responseToClient = Response(clientRequest, serverConfig, responses, types, id)
+                    responseToClient = Response.createResponse(clientRequest, serverConfig, responses, types, id)
                     responseToClient.prepareResponse(serverConfig) # Preparando a resposta para ser eviada
                     
                     log.info(f"Resposta preparada e pronta para ser enviada:")
@@ -225,18 +226,26 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
                             print("Requisição respondida com sucesso!\n")
                         else:
                             print("Erro na requisição!\n")
-        except Exception as err: # Caso ocorra qualquer excessão que não foi lidada anteriormente, fecho todas as conexões
-            if err is KeyboardInterrupt:
+        except (KeyboardInterrupt, Exception) as err: 
+            # Caso ocorra qualquer excessão que não foi lidada anteriormente, fecho todas as conexões
+            # Apenas "except Exception" não captura exceções de KeyboardInterrupt, pois elas herdam da classe Exception
+            if type(err) is KeyboardInterrupt:
                 log.warning("Execução do servidor encerrada pelo teclado! Fechando todas as conexões abertas.")
+                print("\nExecução do servidor encerrada pelo teclado! Fechando todas as conexões abertas.")
             else:
                 log.critical("Exceção inesperada! Fechando todas as conexões abertas.")
+                print("\nExceção inesperada! Fechando todas as conexões abertas.")
             
             for readySocket, _ in incomingConnections:
                 # sanity
                 assert isinstance(readySocket.fileobj, socket.socket)
                 
-                readySocket.fileobj.shutdown(socket.SHUT_RDWR)
-                readySocket.fileobj.close()
+                try:                
+                    readySocket.fileobj.shutdown(socket.SHUT_RDWR)
+                    readySocket.fileobj.close()
+                except OSError:
+                    # As vezes acontece de tentar fechar uma socket já fechada, nesse caso só ignoro a socket e vida que segue
+                    pass
         
     return
     
