@@ -272,6 +272,7 @@ def server(serverConfig:ServerConfig, port:Optional[int]=None) -> None:
                 print("\nExecução do servidor encerrada pelo teclado! Fechando todas as conexões abertas.")
             else:
                 log.critical("Exceção inesperada! Fechando todas as conexões abertas.")
+                log.critical(repr(err))
                 print("\nExceção inesperada! Fechando todas as conexões abertas.")
             
             for readySocket, _ in incomingConnections:
