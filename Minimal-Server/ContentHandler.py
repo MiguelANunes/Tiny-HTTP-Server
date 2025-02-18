@@ -2,7 +2,7 @@ import logging                         # Biblioteca de criação de logs
 import os                              # Para acessar arquivos do sistema
 import gzip                            # Para compactar arquivos binários sendo transferidos
 from Configuration import ServerConfig # Configurações do Servidor
-from typing import Optional, Union     # Anotações de Tipo
+from typing import Union               # Anotações de Tipo
 
 """
 ContentHandler.py

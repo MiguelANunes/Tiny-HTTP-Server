@@ -1,13 +1,13 @@
-import socket                          # Operações sobre sockets
-import logging                         # Biblioteca de criação de logs
-import json                            # Abertura de arquivos .json
-import selectors                       # Multiplexação de input
-import sys                             # Funções do sistema
-from typing import Optional, Any       # Anotações de tipo
-from ResponseHandler import Response   # Módulo de Respostas HTTP
-from RequestHandler import Request     # Módulo de Requisições HTTP
-from Exceptions import HTTPException   # Módulo de Exceções específicas do Servidor
-from Configuration import ServerConfig # Configurações do Servidor
+import socket                                       # Operações sobre sockets
+import logging                                      # Biblioteca de criação de logs
+import json                                         # Abertura de arquivos .json
+import selectors                                    # Multiplexação de input
+import sys                                          # Funções do sistema
+from typing import Optional, Any                    # Anotações de tipo
+from ResponseHandler import Response, ErrorResponse # Módulo de Respostas HTTP
+from RequestHandler import Request                  # Módulo de Requisições HTTP
+from Exceptions import HTTPException, ImTeapot      # Módulo de Exceções específicas do Servidor
+from Configuration import ServerConfig              # Configurações do Servidor
 
 """
 Server.py
@@ -94,11 +94,11 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                     responseInBinary = responseToClient.formatResponse()
                     ret = clientSocket.sendall(responseInBinary)
                     
-                    log.info("Resposta enviada")
-                    
                     if ret is not None:
                         log.warning("Erro ao enviar resposta!")
                         print("Erro ao enviar resposta!")
+                    else:                    
+                        log.info("Resposta enviada")
                     
                     id += 1
                     
@@ -108,12 +108,50 @@ def handle_request(clientSocket: socket.socket, serverConfig:ServerConfig, respo
                     # Caso alguma exceção HTTP tenha sido levantada, processo ela com uma resposta de erro correspondente a exceção
                     log.warning("Excessão HTTP")
                     log.warning(repr(exception))
+                    
+                    # Preparando a msg de erro a ser enviada ao cliente
+                    errorResponse = ErrorResponse(exception, serverConfig, responses, types, id)
+                    errorResponse.prepareResponse(serverConfig)
+                    
+                    log.info(f"Mensagem de erro preparada e pronta para ser enviada:")
+                    log.info(f"\n\n{errorResponse.printHead()}")
+                    
+                    errorInBinary = errorResponse.formatResponse()
+                    
+                    ret = clientSocket.sendall(errorInBinary)
+                    
+                    if ret is not None:
+                        log.warning("Erro ao enviar resposta!")
+                        print("Erro ao enviar resposta!")
+                    else:                    
+                        log.info("Resposta enviada")
+                    
+                    id += 1
+                    
                     return False
                 except Exception as exception:
                     # Caso qualquer outra exceção tenha sido levantada,
                     #   registro isso no log, respondo ao cliente com erro 418 e mato a conexão
+                    
                     log.warning("Outra excessão")
                     log.warning(repr(exception))
+                    
+                    # Preparando a msg de erro a ser enviada ao cliente
+                    errorResponse = ErrorResponse(ImTeapot("Outra excessão"), serverConfig, responses, types, id)
+                    errorResponse.prepareResponse(serverConfig)
+                    
+                    errorInBinary = errorResponse.formatResponse()
+                    
+                    ret = clientSocket.sendall(errorInBinary)
+                    
+                    if ret is not None:
+                        log.warning("Erro ao enviar resposta!")
+                        print("Erro ao enviar resposta!")
+                    else:                    
+                        log.info("Resposta enviada")
+                    
+                    id += 1
+                    
                     return False
 
             linesRead += 1

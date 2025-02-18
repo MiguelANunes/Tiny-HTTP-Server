@@ -75,11 +75,11 @@ class ServerConfig():
         self.configValue = dict()
         
         keys   = [
-            "implemmentedMethods", "httpVersion", "port", "host", "serverName", "contentRoot",
+            "implemmentedMethods", "httpVersion", "port", "host", "serverName", "errorPath", "contentRoot",
             "forbiddenPaths", "forbiddenFiles", "allowedPaths", "allowedFiles"
         ]
         values = [
-            "implemented_methods", "http_version", "port", "host", "server_name", "content_root",
+            "implemented_methods", "http_version", "port", "host", "server_name", "error_path", "content_root",
             ("Forbidden", "paths"), ("Forbidden", "files"), ("Allowed", "paths"), ("Allowed", "files")
         ]
         

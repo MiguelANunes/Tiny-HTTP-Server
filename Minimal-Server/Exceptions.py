@@ -12,9 +12,11 @@ class HTTPException(Exception):
     Serve para separar as exceções do HTTP das exceções normais do Python
     """
     
-    def __init__(self, message:str) -> None:
+    def __init__(self, message:str, code:int, problem:str) -> None:
         super().__init__(message)
-    
+        
+        self.code    = code    # O código do erro
+        self.problem = problem # O que causou o erro
 
 class BadRequest(HTTPException): # 400
     """
@@ -22,10 +24,7 @@ class BadRequest(HTTPException): # 400
     """
     
     def __init__(self, message:str, badComp:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        
-        self.badComp = badComp # O componente específico que estava errado
-        self.code    = 400     # Código do erro  
+        super().__init__(message, 400, badComp)
         
 class Forbidden(HTTPException): # 403
     """
@@ -33,10 +32,7 @@ class Forbidden(HTTPException): # 403
     """
     
     def __init__(self, message:str, requestedPath:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        
-        self.requestedPath = requestedPath # O caminho que o cliente pediu
-        self.code          = 403           # Código do erro
+        super().__init__(message, 403, requestedPath)
 
 class NotFound(HTTPException): # 404
     """
@@ -44,10 +40,7 @@ class NotFound(HTTPException): # 404
     """
     
     def __init__(self, message:str, requestedPath:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        
-        self.requestedPath = requestedPath # O caminho que o cliente pediu
-        self.code          = 404           # Código do erro
+        super().__init__(message, 404, requestedPath)
 
 class ImTeapot(HTTPException): # 418
     """
@@ -55,8 +48,7 @@ class ImTeapot(HTTPException): # 418
     """
     
     def __init__(self, message:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        self.code = 418 # Código do erro
+        super().__init__(message, 418, message)
         
 class InternalError(HTTPException): # 500
     """
@@ -64,8 +56,7 @@ class InternalError(HTTPException): # 500
     """
     
     def __init__(self, message:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        self.code = 500 # Código do erro
+        super().__init__(message, 500, message)
         
 class MethodNotImplemented(HTTPException): # 501
     """
@@ -73,10 +64,7 @@ class MethodNotImplemented(HTTPException): # 501
     """
     
     def __init__(self, message:str, method:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        
-        self.method = method # Método não suportado que foi enviado na requisição
-        self.code   = 501    # Código do erro
+        super().__init__(message, 501, message)
         
 class VersionNotSupported(HTTPException): # 505
     """
@@ -84,7 +72,4 @@ class VersionNotSupported(HTTPException): # 505
     """
     
     def __init__(self, message:str, version:str) -> None:
-        super().__init__(message) # Mensagem da exceção
-        
-        self.version = version # Versão não suportada que foi enviado na requisição
-        self.code    = 505     # Código do erro
+        super().__init__(message, 505, version)

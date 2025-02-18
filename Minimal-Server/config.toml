@@ -21,6 +21,9 @@ content_root = "../Content"
 # Nome do Servidor
 server_name = "migs' Minimal Server"
 
+# Caminho para páginas de erro
+error_path = "/errors/"
+
 # Caminhos e Arquivos Proibidos
 [Forbidden]
 paths = ["..", "~", "//"]

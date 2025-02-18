@@ -28,12 +28,20 @@ class ErrorResponse():
     """
     
     def __init__(self, error:HTTPException, serverConfig: ServerConfig, responseCodes: dict[Any, Any], contentTypes: dict[Any, Any], id: int) -> None:
+        """
+        Construtor da classe de respostas de erro
+        Recebe o erro que ocorreu e apartir dele, obtém o código de resposta e os headers da mensagem a ser enviada
+        """
         
-        # TODO: Documentar e terminar de implementar você
+        # Carregando alguns metadados
+        self.HTTPResponseCodes = responseCodes
+        self.MIMEContentTypes  = contentTypes
         
-        # Inicializando código e mensagem de resposta
-        self.responseCode = 100
-        self.responseMsg: str
+        # Inicializando código e mensagem de resposta a partir do erro ocorrido
+        self.responseCode = error.code
+        self.problem      = error.problem
+        self.responseMsg  = self.HTTPResponseCodes[str(self.responseCode)]["message"]
+        self.version      = serverConfig.configValue["httpVersion"]
         
         # Inicializando os headers da resposta
         self.headers                   = dict()
@@ -44,20 +52,97 @@ class ErrorResponse():
         self.headers["Content-Lenght"] = 0 # Valor padrão, será calculado quando o conteúdo da resposta for determinado
         
         # Inicializando o corpo da resposta
-        self.body: Union[str, bytes, None] # Preciso do None dentro do Union no caso da resposta de HEAD
-        # Parâmetro que indica se o corpo da mensagem é binário ou texto
-        # self.contentIsBinary = False
-        
-        # Carregando alguns metadados
-        self.HTTPResponseCodes = responseCodes
-        self.MIMEContentTypes  = contentTypes
+        self.body: str
     
         # Identificando a resposta
         self.id = id
     
     def prepareResponse(self, serverConfig:ServerConfig) -> None:
-        # TODO: Implementar você
-        pass
+        """
+        Método que prepara a resposta de erro, dependendo do erro que ocorreu
+        Caso o erro tenha uma página associada, recupera essa página e envia ela na resposta
+        Caso não tenha, formata a resposta de erro em JSON e retorna isso no corpo da mensagem
+        
+        Recebe 
+            [ServerConfig] serverConfig: Dados de configuração do servidor
+        
+        Retona:
+            Nada
+        """
+        
+        log.info(f"Processando resposta de erro {self.responseCode}")
+
+        # Apenas três dos erros que posso retornar tem uma página associada, então verifico se o erro que estou processando é um destes
+        # Se sim, recupero a página
+        # Se não, carrego a msg de erro em JSON
+        
+        # sanity
+        #   ||
+        #   \/
+        if int(self.responseCode) in [403, 404,418, 500]:
+            
+            log.info(f"Recuperando página de erro associada ao erro {self.responseCode}")
+            
+            # A página de erro é chamada de {código-erro}.html e se encontra dentro da pasta de erros, que por sua vez está dentro da pasta raiz de conteúdo
+            errorPath = serverConfig.configValue["contentRoot"] + serverConfig.configValue["errorPath"] + str(self.responseCode) + ".html"
+            self.body = ContentHandler.get_resource(errorPath, serverConfig) #type: ignore Linter estava reclamando dos tipos pois get_resource pode retornar bytes, isso nunca vai ocorrer nessa caso
+            
+            # Como eu sei que sempre vou retornar uma página HTML, posso definir rigidamente esses valores
+            self.headers["Content-Lenght"] = len(self.body.encode("utf-8"))
+            self.headers["Content-Type"]   = self.MIMEContentTypes["html"] + "; charset=utf-8"
+            
+            return 
+        
+        log.info(f"Processando mensagem JSON associada ao erro {self.responseCode}")
+        
+        self.body  = f"{{\"error\": {json.dumps(self.responseCode)}}}\n"
+        self.body += f"{{\"message\": {json.dumps(self.problem, ensure_ascii=False)}}}"
+        
+        # Arrumando headers
+        self.headers["Content-Type"]   = "application/json"
+        self.headers["Content-Lenght"] = len(self.body.encode("utf-8"))
+
+    def formatResponse(self) -> bytes:
+        """
+        Método que vai formatar os dados a serem retornados no formato adequado para uma resposta HTTP
+        Todos os dados necessários para a resposta já estão dentro do objeto, logo basta recuperar eles e formatá-los
+        
+        Recebe:
+            Nada
+            
+        Retorna:
+            A resposta formatada codificada em bytes
+        """
+        resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\r\n".encode("utf-8")
+        
+        responseHeaders  = bytearray()
+        for header, value in self.headers.items():
+            responseHeaders += f"{header}: {value}\r\n".encode("utf-8")
+        
+        crlf = "\r\n".encode("utf-8")
+        responseBody = self.body.encode("utf-8") + "\r\n".encode("utf-8")
+
+        response = resposeFirstLine + responseHeaders + crlf + responseBody
+        
+        return response
+     
+    def printHead(self) -> str:
+        """
+        Esse método serve como alternativa ao __str__ para casos onde o corpo da msg é binário que não foi codificado a partir da uma string
+        Ou casos onde não quero ver o corpo da msg, apenas os cabeçalhos (por exemplo para imprimir no log)
+        
+        Recebe:
+            Nada
+        
+        Retorna:
+            String contendo a primeira linha e o cabeçalho da respostas
+        """
+        resposeFirstLine = f"{self.version} {self.responseCode} {self.responseMsg}\n"
+        responseHeaders  = str()
+        for header, value in self.headers.items():
+            responseHeaders += f"{header}: {value}\n"
+        
+        return resposeFirstLine + responseHeaders + f"ID: {self.id}\n"
 
 class Response(ABC):
     """
@@ -220,7 +305,7 @@ class GetResponse(Response):
         
         try:
             # Caso esteja procurando por uma pasta, concateno index.html no final do caminho
-            # para procurar o arquivo html raiz do site
+            # para procurar o arquivo html nessa pasta
             if path.endswith("/"):
                 path += "index.html"
             
@@ -296,9 +381,9 @@ class HeadResponse(Response):
         path = serverConfig.configValue["contentRoot"] + self.resource
         
         try:
-            # Caso esteja procurando pela raiz do site, concateno index.html no final do caminho
-            # para procurar o arquivo html raiz do site
-            if path == serverConfig.configValue["contentRoot"] + "/":
+            # Caso esteja procurando por uma pasta, concateno index.html no final do caminho
+            # para procurar o arquivo html nessa pasta
+            if path.endswith("/"):
                 path += "index.html"
             
             contentSize = ContentHandler.get_sizeof_resource(path, serverConfig)
